@@ -52,24 +52,55 @@ example (a b c : Nat) (h : a * b = a * c) (h' : a ≠ 0) : b = c :=
 
 example {m n : ℕ} (coprime_mn : m.Coprime n) : m ^ 2 ≠ 2 * n ^ 2 := by
   intro sqr_eq
-  have : 2 ∣ m := by
-    sorry
-  obtain ⟨k, meq⟩ := dvd_iff_exists_eq_mul_left.mp this
+  have two_div_m : 2 ∣ m := by
+    apply even_of_even_sqr
+    use n ^ 2
+  obtain ⟨k, meq⟩ := dvd_iff_exists_eq_mul_left.mp two_div_m
   have : 2 * (2 * k ^ 2) = 2 * n ^ 2 := by
     rw [← sqr_eq, meq]
     ring
-  have : 2 * k ^ 2 = n ^ 2 :=
-    sorry
-  have : 2 ∣ n := by
-    sorry
+  have : 2 * k ^ 2 = n ^ 2 := by
+    apply (mul_right_inj' (Nat.succ_ne_zero 1)).mp
+    exact this
+  have two_div_n : 2 ∣ n := by
+    apply even_of_even_sqr
+    use k ^ 2
+    symm
+    exact this
   have : 2 ∣ m.gcd n := by
-    sorry
+    exact Nat.dvd_gcd two_div_m two_div_n
   have : 2 ∣ 1 := by
-    sorry
+    rwa [← coprime_mn]
   norm_num at this
 
+lemma prime_div_of_prime_div_square {p m : ℕ} (hp : Nat.Prime p) (hmp : p ∣ m ^ 2) : p ∣ m:= by
+  rw [pow_two, hp.dvd_mul] at hmp
+  cases hmp <;> assumption
+
 example {m n p : ℕ} (coprime_mn : m.Coprime n) (prime_p : p.Prime) : m ^ 2 ≠ p * n ^ 2 := by
-  sorry
+  intro sqr_eq
+  have p_div_m : p ∣ m := by
+    apply prime_div_of_prime_div_square prime_p
+    use n ^ 2
+  obtain ⟨k, meq⟩ := dvd_iff_exists_eq_mul_left.mp p_div_m
+  have : p * (p * k ^ 2) = p * n ^ 2 := by
+    rw [← sqr_eq, meq]
+    ring
+  have : p * k ^ 2 = n ^ 2 := by
+    apply (mul_right_inj' (Nat.Prime.ne_zero prime_p)).mp
+    exact this
+  have p_div_n : p ∣ n := by
+    apply prime_div_of_prime_div_square prime_p
+    use k ^ 2
+    symm
+    exact this
+  have : p ∣ m.gcd n := by
+    exact Nat.dvd_gcd p_div_m p_div_n
+  have : p ∣ 1 := by
+    rwa [← coprime_mn]
+  apply Nat.Prime.ne_one prime_p
+  exact Nat.dvd_one.mp this
+
 #check Nat.factors
 #check Nat.prime_of_mem_factors
 #check Nat.prod_factors
@@ -94,9 +125,10 @@ example {m n p : ℕ} (nnz : n ≠ 0) (prime_p : p.Prime) : m ^ 2 ≠ p * n ^ 2 
   intro sqr_eq
   have nsqr_nez : n ^ 2 ≠ 0 := by simpa
   have eq1 : Nat.factorization (m ^ 2) p = 2 * m.factorization p := by
-    sorry
+    simp
   have eq2 : (p * n ^ 2).factorization p = 2 * n.factorization p + 1 := by
-    sorry
+    rwa [← prime_p.factorization', ← factorization_pow', ← factorization_mul', mul_comm]
+    exact prime_p.ne_zero
   have : 2 * m.factorization p % 2 = (2 * n.factorization p + 1) % 2 := by
     rw [← eq1, sqr_eq, eq2]
   rw [add_comm, Nat.add_mul_mod_self_left, Nat.mul_mod_right] at this

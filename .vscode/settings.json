@@ -21,7 +21,7 @@
     "lean-tactics.tex":true,
     },
     "editor.minimap.enabled": false,
-    "editor.acceptSuggestionOnEnter": "off",
+    "editor.acceptSuggestionOnEnter": "smart",
     "scm.diffDecorationsGutterVisibility": "hover",
     "editor.semanticHighlighting.enabled": true,
     "editor.semanticTokenColorCustomizations": {

@@ -2,8 +2,8 @@
 
 Please fill out the following:
 ```
-First & last name:
-Uni-ID:
+First & last name: Thomas von Campenhausen
+Uni-ID: 3173805
 ```
 
 ## Your own project

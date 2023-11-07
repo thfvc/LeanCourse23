@@ -19,10 +19,12 @@ example (hn : 2 ∣ n) : (∑ i in range (n + 1), i : ℚ) = n * (n + 1) / 2 := 
   induction n with
   | zero => simp
   | succ n ih =>
+    clear hn
+    rw [sum_range_succ, ih]
+    push_cast
+    ring
     sorry
-    -- rw [sum_range_succ, ih]
-    -- push_cast
-    -- ring
+
 
 
 
@@ -96,8 +98,6 @@ def myPoint3 : Point where
 def myPoint4 : Point := ⟨1, 2, 3⟩
 
 def myPoint5 := Point.mk 1 2 3
-
-
 
 namespace Point
 
@@ -231,7 +231,7 @@ universe u v
 #check Type (v + 3)
 #check Type (max u v)
 #check fun (α : Type u) (β : Type v) ↦ α → β
--- #check Type (u + v) -- the operations on universes are very limited.
+--#check Type (u + v) -- the operations on universes are very limited.
 
 /-
 * `Type*` means `Type u` for some new variable `u`
@@ -298,7 +298,7 @@ def IntGroup : AbelianGroup where
   zero := 0
   add_zero := by simp
   neg := fun a ↦ -a
-  add_neg := by exact?
+  add_neg := by exact fun x => Int.add_right_neg x
 
 lemma AbelianGroup.zero_add (g : AbelianGroup) (x : g.G) : g.add g.zero x = x := by
   rw [g.comm, g.add_zero]
@@ -332,7 +332,7 @@ instance IntGroup' : AbelianGroup' ℤ where
   zero := 0
   add_zero := by simp
   neg := fun a ↦ -a
-  add_neg := by exact?
+  add_neg := by exact fun x => Int.add_right_neg x
 
 #eval AbelianGroup'.add (2 : ℤ) 5
 
@@ -355,12 +355,20 @@ Lean will provide them automatically by searching the corresponding database.
 instance AbelianGroup'.prod (G G' : Type*) [AbelianGroup' G] [AbelianGroup' G'] :
     AbelianGroup' (G × G') where
   add := fun a b ↦ (a.1 +' b.1, a.2 +' b.2)
-  comm := sorry
-  assoc := sorry
+  comm := by
+    intro x y
+    simp [AbelianGroup'.comm]
+  assoc := by
+    intro x y z
+    simp [AbelianGroup'.assoc]
   zero := (𝟘, 𝟘)
-  add_zero := sorry
+  add_zero := by
+    intro x
+    simp [AbelianGroup'.add_zero]
   neg := fun a ↦ (-' a.1, -' a.2)
-  add_neg := sorry
+  add_neg := by
+    intro X
+    simp [AbelianGroup'.add_neg]
 
 set_option trace.Meta.synthInstance true in
 #eval ((2, 3) : ℤ × ℤ) +' (4, 5)
@@ -402,11 +410,29 @@ example (x : ℝ) : x * 1 = x := mul_one x
 `x₀ ≠ x₁` in it.
 Then state and prove the lemma that for any object in this class we have `∀ z, z ≠ x₀ ∨ z ≠ x₁.` -/
 
+class strict_bipointed_type (A : Type*) where
+  x₀ : A
+  x₁ : A
+  h  : x₀ ≠ x₁
+
+lemma sbtne (A : Type*) [strict_bipointed_type A] : ∀ z : A, z ≠ strict_bipointed_type.x₀ ∨ z ≠ strict_bipointed_type.x₁ := by
+  intro z
+  by_cases h1 : z = strict_bipointed_type.x₀
+  case pos =>
+    right
+    rw [h1]
+    exact strict_bipointed_type.h
+  case neg =>
+    left
+    exact h1
 
 
 /- 2. Define scalar multiplication of a real number and a `Point`.
 Also define scalar multiplication of a positive real number and a `PosPoint`. -/
 
+def scalar_mul (x : ℝ) (p : Point) : Point := ⟨x * p.1, x * p.2, x * p.3⟩
+
+--def scalar_mul_pos (x : pos_real) (p : PosPoint) : PosPoint := ⟨x * p.1, x * p.2, x * p.3, sorry, sorry , sorry⟩
 
 
 /- 3. Define Pythagorean triples, i.e. triples `a b c : ℕ` with `a^2 + b^2 = c^2`.

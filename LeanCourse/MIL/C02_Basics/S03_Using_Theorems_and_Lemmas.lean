@@ -44,7 +44,7 @@ example (x : ℝ) : x ≤ x :=
 
 -- Try this.
 example (h₀ : a ≤ b) (h₁ : b < c) (h₂ : c ≤ d) (h₃ : d < e) : a < e := by
-  sorry
+  apply lt_trans (lt_of_lt_of_le (lt_of_le_of_lt h₀ h₁) h₂) h₃
 
 example (h₀ : a ≤ b) (h₁ : b < c) (h₂ : c ≤ d) (h₃ : d < e) : a < e := by
   linarith
@@ -86,22 +86,40 @@ example (h₀ : a ≤ b) (h₁ : c < d) : a + exp c + e < b + exp d + e := by
     apply exp_lt_exp.mpr h₁
   apply le_refl
 
-example (h₀ : d ≤ e) : c + exp (a + d) ≤ c + exp (a + e) := by sorry
+example (h₀ : d ≤ e) : c + exp (a + d) ≤ c + exp (a + e) := by
+   apply add_le_add_left
+   rw [exp_le_exp]
+   apply add_le_add_left
+   exact h₀
 
 example : (0 : ℝ) < 1 := by norm_num
 
 example (h : a ≤ b) : log (1 + exp a) ≤ log (1 + exp b) := by
-  have h₀ : 0 < 1 + exp a := by sorry
-  have h₁ : 0 < 1 + exp b := by sorry
+  have h₀ : 0 < 1 + exp a := by
+    apply add_pos
+    · norm_num
+    · exact exp_pos a
+  have h₁ : 0 < 1 + exp b := by
+    apply add_pos
+    · norm_num
+    · exact exp_pos b
   apply (log_le_log h₀ h₁).mpr
-  sorry
+  apply add_le_add_left
+  apply exp_le_exp.mpr
+  exact h
 
 example : 0 ≤ a ^ 2 := by
-  -- apply?
   exact sq_nonneg a
 
+#check sub_eq_add_neg
+
 example (h : a ≤ b) : c - exp b ≤ c - exp a := by
-  sorry
+  repeat rw [sub_eq_add_neg]
+  apply add_le_add_left
+  refine neg_le_neg_iff.mpr ?bc.a
+  apply exp_le_exp.mpr
+  exact h
+
 
 example : 2 * a * b ≤ a ^ 2 + b ^ 2 := by
   have h : 0 ≤ a ^ 2 - 2 * a * b + b ^ 2
@@ -124,6 +142,24 @@ example : 2 * a * b ≤ a ^ 2 + b ^ 2 := by
   linarith
 
 example : |a * b| ≤ (a ^ 2 + b ^ 2) / 2 := by
-  sorry
+  have h1 : (0 : ℝ ) < 2 := by linarith
+  apply abs_le'.mpr
+  constructor
+  · apply (le_div_iff' h1).mpr
+    have h2 : 0 ≤ a^2 - 2*a*b + b ^ 2
+    calc
+       a^2 - 2*a*b + b^2 = (a - b)^2 := by ring
+       _                 ≥ 0         := by apply pow_two_nonneg
+    linarith
+  · apply (le_div_iff' h1).mpr
+    rw [mul_neg]
+    have h3 : 0 ≤ a^2 + 2*a*b + b^2
+    calc
+       a^2 + 2*a*b + b^2 = (a + b)^2 := by ring
+       _                 ≥ 0         := by apply pow_two_nonneg
+    linarith
+
 
 #check abs_le'.mpr
+
+#check abs_le'
