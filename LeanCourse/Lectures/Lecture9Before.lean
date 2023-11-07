@@ -360,27 +360,81 @@ open Subgroup
 /- Define the conjugate of a subgroup. -/
 def conjugate (x : G) (H : Subgroup G) : Subgroup G where
   carrier := {a : G | ∃ h, h ∈ H ∧ a = x * h * x⁻¹}
-  one_mem' := by sorry
-  inv_mem' := by sorry
-  mul_mem' := by sorry
+  one_mem' := by
+    simp
+    use 1
+    constructor
+    · exact Subgroup.one_mem H
+    · group
+  inv_mem' := by
+    simp
+    intro a b hb ha
+    use b⁻¹
+    constructor
+    · exact Subgroup.inv_mem H hb
+    · rw [ha]
+      group
+  mul_mem' := by
+    simp
+    intro a b c hc ha d hd hb
+    use c * d
+    constructor
+    · exact Subgroup.mul_mem H hc hd
+    · rw [ha, hb]
+      group
 
 /- Now let's prove that a group acts on its own subgroups by conjugation. -/
 
-lemma conjugate_one (H : Subgroup G) : conjugate 1 H = H := by sorry
+lemma conjugate_one (H : Subgroup G) : conjugate 1 H = H := by
+  ext x
+  constructor
+  · intro hx
+    obtain ⟨y, hy⟩ := hx
+    group at hy
+    rw [← hy.2] at hy
+    exact hy.1
+  · intro hx
+    use x
+    constructor
+    · exact hx
+    · group
 
 lemma conjugate_mul (x y : G) (H : Subgroup G) :
-    conjugate (x * y) H = conjugate x (conjugate y H) := by sorry
+    conjugate (x * y) H = conjugate x (conjugate y H) := by
+    ext a
+    constructor
+    · intro ha
+      obtain ⟨b, hb⟩ := ha
+      use y * b * y⁻¹
+      constructor
+      · use b
+        exact ⟨hb.1, rfl⟩
+      · rw [hb.2]
+        group
+    · intro ha
+      obtain ⟨b, hb⟩ := ha
+      obtain ⟨c, hc⟩ := hb.1
+      use c
+      constructor
+      · exact hc.1
+      · rw [hb.2, hc.2]
+        group
 
 instance : MulAction G (Subgroup G) where
   smul := conjugate
-  one_smul := sorry
-  mul_smul := sorry
+  one_smul := conjugate_one
+  mul_smul := conjugate_mul
 
 
 /- State and prove that the preimage of `U` under the composition of `φ` and `ψ` is a preimage
 of a preimage of `U`. Use `comap` and `comp` in the statement. -/
-example (φ : G →* H) (ψ : H →* K) (U : Subgroup K) : sorry := sorry
+example (φ : G →* H) (ψ : H →* K) (U : Subgroup K) : Subgroup.comap (ψ.comp φ) U = Subgroup.comap φ (Subgroup.comap ψ U) := by
+  ext x
+  simp
+
 
 /- State and prove that the image of `S` under the composition of `φ` and `ψ`
 is a image of an image of `S`. -/
-example (φ : G →* H) (ψ : H →* K) (S : Subgroup G) : sorry := sorry
+example (φ : G →* H) (ψ : H →* K) (S : Subgroup G) : Subgroup.map (ψ.comp φ) S = Subgroup.map ψ (Subgroup.map φ S) := by
+  ext x
+  simp
