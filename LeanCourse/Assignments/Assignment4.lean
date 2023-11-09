@@ -149,9 +149,6 @@ lemma exercise4_2 {ι α : Type*} [LinearOrder ι] [wf : WellFoundedLT ι] (A C 
           exact hk.2
         exact ih.2 k hk.2 $ hk.1
 
-
-
-
 /-- Let's prove that the positive reals form a group under multiplication.
 Note: in this exercise `rw` and `simp` will not be that helpful, since the definition is hidden
 behind notation. But you can use apply to use the lemmas about real numbers.
@@ -209,12 +206,9 @@ lemma mul'_left_inv' (a : PosReal) : mul' (inv' a) a = one' := by
       _ = one'.1 := by rfl
   exact PosReal.ext (mul' (inv' a) a) one' this
 
-
-
-noncomputable def exercise4_3 : Group PosReal where
+lemma exercise4_3 : Group PosReal where
   mul := mul'
-  mul_assoc := by
-    exact mul'_assoc
+  mul_assoc := mul'_assoc
   one := one'
   one_mul := one'_mul'
   mul_one := mul'_one'
@@ -269,7 +263,6 @@ lemma exercise4_4 (n : ℕ) :
         obtain ⟨a, b, ha, hb, hab⟩ := hn2
         rw [prime_def_lt] at hn'
         have bneo : b ≠ 1 := by exact Nat.ne_of_gt hb
-
         have bltn : b < n := by
           rw [hab]
           calc a * b
@@ -277,12 +270,10 @@ lemma exercise4_4 (n : ℕ) :
             _ = b + b := by rw [two_mul]
             _ > 0 + b := by linarith
             _ = b     := by rw [zero_add]
-
         have bdivn : b ∣ n := by
           use a
           rw [mul_comm]
           exact hab
-
         exact bneo $ hn'.2 b bltn bdivn -- I like this last line, but I can see that it might not be elegant code
 
 
@@ -302,12 +293,13 @@ lemma exercise4_5 (n : ℕ) (hn : Nat.Prime (2 ^ n - 1)) : Nat.Prime n := by
     exact hn
   have h : (2 : ℤ) ^ a - 1 ∣ (2 : ℤ) ^ (a * b) - 1
   · rw [← Int.modEq_zero_iff_dvd]
+    have bne0 : b ≠ 0 := by exact Nat.not_eq_zero_of_lt hb
     calc (2 : ℤ) ^ (a * b) - 1
         ≡ ((2 : ℤ) ^ a) ^ b - 1 [ZMOD (2 : ℤ) ^ a - 1] := by rw [pow_mul]
-      _ ≡ ((2 : ℤ) ^ a - 1 + 1) ^ b - 1 [ZMOD (2 : ℤ) ^ a - 1] := by rw [Int.sub_add_cancel]
+      --_ ≡ ((2 : ℤ) ^ a - 1 + 1) ^ b - 1 [ZMOD (2 : ℤ) ^ a - 1] := by rw [Int.sub_add_cancel]
       --_ ≡ ∑ i in range b, (choose i b) * ((2 : ℤ) ^ a - 1) ^ i * 1 ^ (b - i) [ZMOD (2 : ℤ) ^ a - 1] := by rw?
-      _ ≡ ((0 : ℤ) + (1 : ℤ)) ^ b - 1 [ZMOD (2 : ℤ) ^ a - 1] := by sorry
-      _ ≡ (1 : ℤ) ^ b - 1 [ZMOD (2 : ℤ) ^ a - 1] := by rw [Int.zero_add]
+      _ ≡ (1 : ℤ) ^ b - 1 [ZMOD (2 : ℤ) ^ a - 1] := by gcongr; apply Int.modEq_sub
+      --_ ≡ (1 : ℤ) ^ b - 1 [ZMOD (2 : ℤ) ^ a - 1] := by rw [Int.zero_add]
       _ ≡ (1 : ℤ) - 1 [ZMOD (2 : ℤ) ^ a - 1] := by rw [one_pow]
       _ ≡ 0 [ZMOD (2 : ℤ) ^ a - 1] := by rfl
   have h2 : 2 ^ 2 ≤ 2 ^ a := by
