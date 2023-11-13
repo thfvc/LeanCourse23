@@ -5,7 +5,7 @@ noncomputable section
 set_option linter.unusedVariables false
 local macro_rules | `($x ^ $y) => `(HPow.hPow $x $y)
 
-
+-- (not much changed compared to the "before" version)
 
 /- Practical:
 * **I have updated the version of mathlib for this repository**. Rerun `lake exe cache get!`.
@@ -15,7 +15,7 @@ local macro_rules | `($x ^ $y) => `(HPow.hPow $x $y)
   how this is done in Lean.
   - Group theory: group homomorphisms, subgroups, quotient groups, group actions
   - Ring theory: ideals, units, polynomials
-  - Topology: Metric spaces, Hausdorff spaces, compact sets
+  - Topology: Topological spaces, metric spaces, Hausdorff spaces, compact sets
   - Calculus: total derivative of a multivariate function
   - Integration: measures
 -/
@@ -26,6 +26,7 @@ We cover section 8.1 from Mathematics in Lean.
 
 Chapter 7 covers some of the design decisions for algebraic structures.
 I recommend that you read through it, but I won't cover it in detail in class. -/
+
 
 /-
 Last time we discussed structures and classes
@@ -40,6 +41,8 @@ of another type. We've already seen the coercions
 `ℕ → ℤ → ℚ → ℝ → ℂ`
 for numbers.
 -/
+
+#check fun n : ℕ ↦ (n : ℚ)
 
 def PosReal : Type := {x : ℝ // x > 0}
 
@@ -112,8 +115,7 @@ The type of morphisms between monoids `M` and `N` is called `MonoidHom M N` and 
 They both have a coercion to functions.
 -/
 
-example {M N : Type*} [Monoid M] [Monoid N] (x y : M) (f : M →* N) : f (x * y) = f x * f y :=
-  f.map_mul x y
+example {M N : Type*} [Monoid M] [Monoid N] (x y : M) (f : M →* N) : f (x * y) = f x * f y := by exact f.map_mul x y
 
 example {M N : Type*} [AddMonoid M] [AddMonoid N] (f : M →+ N) : f 0 = 0 :=
   f.map_zero
@@ -169,8 +171,7 @@ This type is automatically coerced to morphisms and functions.
 -/
 
 example {G H : Type*} [Group G] [Group H] (f : G ≃* H) :
-    f.trans f.symm = MulEquiv.refl G :=
-  f.self_trans_symm
+    f.trans f.symm = MulEquiv.refl G := by exact?
 
 
 
@@ -223,7 +224,7 @@ have the lattice operation `⊓` and all lemmas about lattices are readily avail
 example {G : Type*} [Group G] : CompleteLattice (Subgroup G) := by infer_instance
 
 example {G : Type*} [Group G] (H H' : Subgroup G) :
-    ((H ⊓ H' : Subgroup G) : Set G) = (H : Set G) ∩ (H' : Set G) := rfl
+    ((H ⊓ H' : Subgroup G) : Set G) = (H : Set G) ∩ (H' : Set G) := by rfl
 
 example {G : Type*} [Group G] (H H' : Subgroup G) :
     ((H ⊔ H' : Subgroup G) : Set G) = Subgroup.closure ((H : Set G) ∪ (H' : Set G)) := by
@@ -360,81 +361,27 @@ open Subgroup
 /- Define the conjugate of a subgroup. -/
 def conjugate (x : G) (H : Subgroup G) : Subgroup G where
   carrier := {a : G | ∃ h, h ∈ H ∧ a = x * h * x⁻¹}
-  one_mem' := by
-    simp
-    use 1
-    constructor
-    · exact Subgroup.one_mem H
-    · group
-  inv_mem' := by
-    simp
-    intro a b hb ha
-    use b⁻¹
-    constructor
-    · exact Subgroup.inv_mem H hb
-    · rw [ha]
-      group
-  mul_mem' := by
-    simp
-    intro a b c hc ha d hd hb
-    use c * d
-    constructor
-    · exact Subgroup.mul_mem H hc hd
-    · rw [ha, hb]
-      group
+  one_mem' := by sorry
+  inv_mem' := by sorry
+  mul_mem' := by sorry
 
 /- Now let's prove that a group acts on its own subgroups by conjugation. -/
 
-lemma conjugate_one (H : Subgroup G) : conjugate 1 H = H := by
-  ext x
-  constructor
-  · intro hx
-    obtain ⟨y, hy⟩ := hx
-    group at hy
-    rw [← hy.2] at hy
-    exact hy.1
-  · intro hx
-    use x
-    constructor
-    · exact hx
-    · group
+lemma conjugate_one (H : Subgroup G) : conjugate 1 H = H := by sorry
 
 lemma conjugate_mul (x y : G) (H : Subgroup G) :
-    conjugate (x * y) H = conjugate x (conjugate y H) := by
-    ext a
-    constructor
-    · intro ha
-      obtain ⟨b, hb⟩ := ha
-      use y * b * y⁻¹
-      constructor
-      · use b
-        exact ⟨hb.1, rfl⟩
-      · rw [hb.2]
-        group
-    · intro ha
-      obtain ⟨b, hb⟩ := ha
-      obtain ⟨c, hc⟩ := hb.1
-      use c
-      constructor
-      · exact hc.1
-      · rw [hb.2, hc.2]
-        group
+    conjugate (x * y) H = conjugate x (conjugate y H) := by sorry
 
 instance : MulAction G (Subgroup G) where
   smul := conjugate
-  one_smul := conjugate_one
-  mul_smul := conjugate_mul
+  one_smul := sorry
+  mul_smul := sorry
 
 
 /- State and prove that the preimage of `U` under the composition of `φ` and `ψ` is a preimage
 of a preimage of `U`. Use `comap` and `comp` in the statement. -/
-example (φ : G →* H) (ψ : H →* K) (U : Subgroup K) : Subgroup.comap (ψ.comp φ) U = Subgroup.comap φ (Subgroup.comap ψ U) := by
-  ext x
-  simp
-
+example (φ : G →* H) (ψ : H →* K) (U : Subgroup K) : sorry := sorry
 
 /- State and prove that the image of `S` under the composition of `φ` and `ψ`
 is a image of an image of `S`. -/
-example (φ : G →* H) (ψ : H →* K) (S : Subgroup G) : Subgroup.map (ψ.comp φ) S = Subgroup.map ψ (Subgroup.map φ S) := by
-  ext x
-  simp
+example (φ : G →* H) (ψ : H →* K) (S : Subgroup G) : sorry := sorry
