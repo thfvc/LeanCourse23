@@ -153,26 +153,68 @@ lemma exercise5_3 (x y : K) : (x + y) ^ p = x ^ p + y ^ p := by
       _ = ∑ i in Ioo 0 p, x ^ i * y ^ (p - i) * 0 := by rw [Finset.sum_congr rfl h']
       _ = ∑ i in Ioo 0 p, 0                       := by ring
       _ = 0 := by exact sum_const_zero
+
   calc ∑ m in range (p + 1), x ^ m * y ^ (p - m) * Nat.choose p m
     _ = (∑ m in range p, x ^ m * y ^ (p - m) * Nat.choose p m) + x ^ p * y ^ (p - p) * Nat.choose p p := by rw [sum_range_succ]
     _ = (∑ m in range p, x ^ m * y ^ (p - m) * Nat.choose p m) + x ^ p * y ^ 0 * Nat.choose p p := by rw [tsub_self]
     _ = (∑ m in range p, x ^ m * y ^ (p - m) * Nat.choose p m) + x ^ p * 1 * Nat.choose p p := by rw [_root_.pow_zero]
     _ = (∑ m in range p, x ^ m * y ^ (p - m) * Nat.choose p m) + x ^ p * Nat.choose p p := by rw [mul_one]
-    _ = (∑ m in range p, x ^ m * y ^ (p - m) * Nat.choose p m) + x ^ p * 1 := by sorry
+    _ = (∑ m in range p, x ^ m * y ^ (p - m) * Nat.choose p m) + x ^ p * (1 : ℕ) := by rw [Nat.choose_self]
+    _ = (∑ m in range p, x ^ m * y ^ (p - m) * Nat.choose p m) + x ^ p * 1 := by simp
     _ = (∑ m in range p, x ^ m * y ^ (p - m) * Nat.choose p m) + x ^ p := by rw [mul_one]
     _ = (∑ m in insert 0 (Ioo 0 p), x ^ m * y ^ (p-m) * Nat.choose p m) + x ^ p := by rw [h4]
-    _ = ((∑ m in Ioo 0 p, x ^ m * y ^ (p - m) * Nat.choose p m) + (x ^ 0 * y ^ (p - 0) * Nat.choose p p)) + x ^ p := by sorry
-    _ = (0 + (x ^ 0 * y ^ (p - 0) * Nat.choose p p)) + x ^ p := by sorry
-    _ = x ^ p + y ^ p := by sorry
-
+    _ = x ^ 0 * y ^ (p - 0) * Nat.choose p 0 + ∑ m in Ioo 0 p, x ^ m * y ^ (p - m) * Nat.choose p m + x ^ p := by rw [Finset.sum_insert left_not_mem_Ioo]
+    _ = x ^ 0 * y ^ (p - 0) * Nat.choose p 0 + 0 + x ^ p := by rw [h6]
+    _ = 1 * y ^ p * Nat.choose p 0 + x ^ p := by simp
+    _ = y ^ p * Nat.choose p 0 + x ^ p := by simp
+    _ = y ^ p * (1 : ℕ) + x ^ p := by rw [Nat.choose_zero_right p]
+    _ = y ^ p + x ^ p := by simp
+    _ = x ^ p + y ^ p := by rw [add_comm]
 
 /- Let's prove that if `M →ₗ[R] M` forms a module over `R`, then `R` must be a commutative ring.
   To prove this we have to additionally assume that `M` contains at least two elements, and
 `smul_eq_zero : r • x = 0 ↔ r = 0 ∨ x = 0` (this is given by the `NoZeroSMulDivisors` class).
 -/
 #check exists_ne
+#check exists_pair_ne
+
 lemma exercise5_4 {R M M' : Type*} [Ring R] [AddCommGroup M] [Module R M] [Nontrivial M]
     [NoZeroSMulDivisors R M] [Module R (M →ₗ[R] M)]
     (h : ∀ (r : R) (f : M →ₗ[R] M) (x : M), (r • f) x = r • f x)
     (r s : R) : r * s = s * r := by
+  have ignore (f : M →ₗ[R] M) (h : f ≠ 0) : ∃ m : M, f m ≠ 0 := by
+    by_contra hyp
+    push_neg at hyp
+    apply h
+    ext x
+    rw [hyp]
+    simp
+
+
+
+  have (f : M →ₗ[R] M) (r : R) (h' : r • f = 0): r = 0 ∨ f = 0 := by
+    by_contra hyp
+    push_neg at hyp
+    obtain ⟨m, hm⟩ := ignore f hyp.2
+    have m_ne_z : m ≠ 0 := by
+      by_contra tt
+      apply hm
+      rw [tt]
+      exact LinearMap.map_zero f
+    have rfmez : r • (f m) = 0 := by
+      rw [← h, h']
+      rfl
+    have rezofmez : r = 0 ∨ f m = 0 := by
+      exact smul_eq_zero.mp rfmez
+    obtain hr | hfm := rezofmez
+    · exact hyp.1 hr
+    · exact hm hfm
+  let ι : (M →ₗ[R] M) := LinearMap.id --id M
+  obtain ⟨m, hm⟩ := exists_ne (0 : M)
+  have fnez : ι ≠ 0 := by
+    intro hι
+    apply hm
+    calc m
+      _ = ι.toFun m := by rfl
+      _ = 0 m := sorry --by rw [hι]
   sorry
