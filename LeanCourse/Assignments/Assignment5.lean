@@ -209,12 +209,13 @@ lemma exercise5_4 {R M M' : Type*} [Ring R] [AddCommGroup M] [Module R M] [Nontr
     obtain hr | hfm := rezofmez
     · exact hyp.1 hr
     · exact hm hfm
-  let ι : (M →ₗ[R] M) := LinearMap.id --id M
+  let ι : (M →ₗ[R] M) := LinearMap.id
   obtain ⟨m, hm⟩ := exists_ne (0 : M)
   have fnez : ι ≠ 0 := by
     intro hι
     apply hm
     calc m
       _ = ι.toFun m := by rfl
-      _ = 0 m := sorry --by rw [hι]
+      _ = (0 : M →ₗ[R] M).toFun m := by rw [hι]
+      _ = (0 : M) := by rfl
   sorry
