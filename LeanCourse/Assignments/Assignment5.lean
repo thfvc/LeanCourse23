@@ -190,9 +190,7 @@ lemma exercise5_4 {R M M' : Type*} [Ring R] [AddCommGroup M] [Module R M] [Nontr
     rw [hyp]
     simp
 
-
-
-  have (f : M →ₗ[R] M) (r : R) (h' : r • f = 0): r = 0 ∨ f = 0 := by
+  have smul_eq_zero_endo (f : M →ₗ[R] M) (r : R) (h' : r • f = 0) : r = 0 ∨ f = 0 := by
     by_contra hyp
     push_neg at hyp
     obtain ⟨m, hm⟩ := ignore f hyp.2
@@ -209,13 +207,44 @@ lemma exercise5_4 {R M M' : Type*} [Ring R] [AddCommGroup M] [Module R M] [Nontr
     obtain hr | hfm := rezofmez
     · exact hyp.1 hr
     · exact hm hfm
+
   let ι : (M →ₗ[R] M) := LinearMap.id
-  obtain ⟨m, hm⟩ := exists_ne (0 : M)
+
   have fnez : ι ≠ 0 := by
     intro hι
+    obtain ⟨m, hm⟩ := exists_ne (0 : M)
     apply hm
     calc m
       _ = ι.toFun m := by rfl
       _ = (0 : M →ₗ[R] M).toFun m := by rw [hι]
       _ = (0 : M) := by rfl
-  sorry
+  have commz : r * s - s * r = 0 := by
+    by_contra hyp
+    have : (r * s - s * r) • ι = 0 := by
+      ext m
+      rw [@LinearMap.zero_apply]
+      calc ((r * s - s * r) • ι) m
+        _ = ((r * s) • ι - (s * r) • ι) m := by rw [sub_smul]
+        _ = ((r * s) • ι) m - ((s * r) • ι) m := by rw [LinearMap.sub_apply]
+        _ = (r • (s • ι)) m - ((s * r) • ι) m := by rw [mul_smul]
+        _ = r • ((s • ι) m) - ((s * r) • ι) m := by rw [h]
+        _ = (s • ι) (r • m) - ((s * r) • ι) m := by rw [LinearMap.map_smul]
+        _ = s • (ι (r • m)) - ((s * r) • ι) m := by rw [h]
+        _ = ι (s • (r • m)) - ((s * r) • ι) m := by rw [← LinearMap.map_smul]
+        _ = ι ((s * r) • m) - ((s * r) • ι) m := by rw [smul_smul]
+        _ = (s * r) • (ι m) - ((s * r) • ι) m := by rw [LinearMap.map_smul]
+        _ = (s * r) • (ι m) - (s * r) • (ι m) := by rw [h]
+        _ = 0 := by rw [@sub_eq_zero]
+    obtain hl | hr := smul_eq_zero_endo ι (r * s - s * r) this
+    · exact hyp hl
+    · exact fnez hr
+
+
+  symm
+  calc s * r
+    _ = s * r + 0 := by rw[add_zero]
+    _ = s * r + (r * s - s * r) := by rw [commz]
+    _ = s * r + r * s - s * r := by rw [add_sub]
+    _ = s * r - s * r + r * s := by rw [add_sub_right_comm]
+    _ = 0 + r * s             := by rw [sub_self]
+    _ = r * s                 := by rw [zero_add]
