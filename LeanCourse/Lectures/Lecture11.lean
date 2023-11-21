@@ -241,10 +241,6 @@ example {f : X → Y} {x₀ : X} :
 
 
 
-
-
-
-
 /- Neighborhoods are characterized by the following lemma. -/
 example {x : X} {s : Set X} :
     s ∈ 𝓝 x ↔ ∃ t, t ⊆ s ∧ IsOpen t ∧ x ∈ t :=

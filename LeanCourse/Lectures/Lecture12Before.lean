@@ -35,7 +35,7 @@ variable (f : ℝ → ℝ) (x : ℝ) in
 Often it is nicer to use the predicate `HasDerivAt f y x`, which states that `f`
 is differentiable and `f'(x) = y`. -/
 
-example (x : ℝ) : HasDerivAt Real.sin (Real.cos x) x := by exact?
+example (x : ℝ) : HasDerivAt Real.sin (Real.cos x) x := by exact hasDerivAt_sin x
 
 /- We can also specify that a function has a derivative without specifying its
 derivative. -/
@@ -52,7 +52,9 @@ example (x : ℝ) : DifferentiableAt ℝ sin x :=
 
 example (x : ℝ) :
     HasDerivAt (fun x ↦ Real.cos x + Real.sin x)
-    (Real.cos x - Real.sin x) x := by sorry
+    (Real.cos x - Real.sin x) x := by
+    rw [sub_eq_add_neg, add_comm]
+    exact HasDerivAt.add (hasDerivAt_cos x) (hasDerivAt_sin x)
 
 
 
@@ -63,7 +65,9 @@ example (x : ℝ) :
 (normed) vector space. -/
 
 example (x : ℝ) : deriv (fun x ↦ ((Real.cos x) ^ 2, (Real.sin x) ^ 2)) x =
-    (- 2 * Real.cos x * Real.sin x, 2 * Real.sin x * Real.cos x) := by sorry
+    (- 2 * Real.cos x * Real.sin x, 2 * Real.sin x * Real.cos x) := by
+    apply Prod.ext_iff.mpr
+    sorry
 
 /-
 Lean has the following names for intervals
@@ -213,7 +217,8 @@ example (f : E → F) (f' : E →L[𝕜] F) (x₀ : E) (hff' : HasFDerivAt f f' 
 
 variable {f g : E → F} {n : ℕ∞}
 example (hf : ContDiff 𝕜 n f) (hg : ContDiff 𝕜 n g) :
-    ContDiff 𝕜 n (fun x ↦ (f x, 2 • f x + g x)) := by sorry
+    ContDiff 𝕜 n (fun x ↦ (f x, 2 • f x + g x)) := by
+    apply ContDiff.prod hf $ ContDiff.add (ContDiff.const_smul 2 hf) hg
 
 example : ContDiff 𝕜 0 f ↔ Continuous f := contDiff_zero
 
@@ -229,13 +234,35 @@ end NormedSpace
 /- # Exercises -/
 
 example (x : ℝ) :
-    deriv (fun x ↦ Real.exp (x ^ 2)) x = 2 * x * Real.exp (x ^ 2) := by sorry
+    deriv (fun x ↦ Real.exp (x ^ 2)) x = 2 * x * Real.exp (x ^ 2) := by
+    simp
+    rw [mul_comm]
 
 /- If you have a continuous injective function `ℝ → ℝ` then `f` is monotone or antitone. This is a possible first step in proving that result.
 Prove this by contradiction using the intermediate value theorem. -/
 example {f : ℝ → ℝ} (hf : Continuous f) (h2f : Injective f) {a b x : ℝ}
-    (hab : a ≤ b) (h2ab : f a < f b) (hx : x ∈ Icc a b) : f a ≤ f x := by sorry
+    (hab : a ≤ b) (h2ab : f a < f b) (hx : x ∈ Icc a b) : f a ≤ f x := by
+    by_contra hyp
 
+    rw [← lt_iff_not_ge] at hyp
+    have hfxfb : f x < f b := gt_trans h2ab hyp
+
+    have intermediate: Ioo (f x) (f b) ⊆ f '' (Ioo x b) := intermediate_value_Ioo hx.2 $ Continuous.continuousOn hf
+    have hfa : f a ∈ Ioo (f x) (f b) := ⟨hyp, h2ab⟩
+    specialize intermediate hfa
+
+    obtain ⟨x', hx'⟩ := inter_nonempty_iff_exists_right.mp intermediate
+
+    have xea : x' = a := h2f hx'.1
+
+    symm at xea
+
+    have xna : a ≠ x' := ne_of_lt $ lt_of_le_of_lt hx.1 hx'.2.1
+
+    exact xna xea
+
+
+#check IsBoundedBilinearMap.contDiff
 
 variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
   {E : Type*} [NormedAddCommGroup E] [NormedSpace 𝕜 E]
@@ -243,7 +270,11 @@ variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
 /- In this exercise you should combine the right lemmas from the library, in particular `IsBoundedBilinearMap.contDiff`. -/
 example (L : E →L[𝕜] E →L[𝕜] E) (f g : E → E) (hf : ContDiff 𝕜 n f)
     (hg : ContDiff 𝕜 n g) :
-    ContDiff 𝕜 n (fun z : E × E ↦ L (f z.1) (g z.2)) := by sorry
+    ContDiff 𝕜 n (fun z : E × E ↦ L (f z.1) (g z.2)) := by
+    apply ContDiff.clm_apply ?hf ?hg
+    · apply ContDiff.continuousLinearMap_comp L ?hf.hf
+      exact ContDiff.fst' hf
+    · exact ContDiff.snd' hg
 
 
 /- If you finish these exercises, continue with the exercises of lecture 11. -/
