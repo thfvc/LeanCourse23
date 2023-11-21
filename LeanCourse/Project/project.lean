@@ -145,19 +145,23 @@ lemma fuckinghellthisshouldbeeasy (x : Fin 2) (h : x ≠ 0) : x = 1 := by
   apply Fin.fin_two_eq_of_eq_zero_iff
   simp [h]
 
-lemma nonempty_of_card_pos {A : Type} (h : 1 ≤ # A) : Nonempty A := by
+lemma nonempty_of_card_pos {A : Type*} (h : 1 ≤ # A) : Nonempty A := by
   have ⟨f, _⟩ := (Cardinal.le_def _ _).mp h
 
-  use f (0 : ULift.{0, 0} (Fin 1))
+  use f 0
 
-lemma todo2 {X : Type*} {A : Set X} (hA : # A = 1) : ∃ x : X, {x} = A := by
-  sorry
-  /-
-  have : ∃ x : X, x ∈ A := by
-    have : #A > 0 := by
-      rw [hA]
-      exact one_pos
-  -/
+
+lemma todo2 {X : Type*} {A : Set X} (hA : # A = 1) : ∃ x : X, A = {x} := by
+  have one_le_card : 1 ≤ # A := by exact Eq.le hA.symm
+  have card_le_one : # A ≤ 1 := by exact Eq.le hA
+
+  obtain ⟨x, hx⟩ := nonempty_of_card_pos one_le_card
+  use x
+
+  apply Set.Subsingleton.eq_singleton_of_mem
+  · apply mk_le_one_iff_set_subsingleton.mp card_le_one
+  · exact hx
+
 lemma rathole_principle : arrows ℵ₀ 0 (Set.univ : Set ℕ) (Fin 2) := by
   intro c
   use Set.univ
@@ -189,14 +193,14 @@ lemma pigeonhole_principle : arrows ℵ₀ 1 (Set.univ : Set ℕ) (Fin 2) := by
   have Hhom (i : Fin 2): homogeneous c $ H i := by
     use i
     intro Y hY
-    have : ∃ n : ℕ, {n} = Y.1 := todo2 Y.2.1 --should follow from being singleton
-    obtain ⟨n, hn⟩ := this
+    --have : ∃ n : ℕ, {n} = Y.1 :=  --should follow from being singleton
+    obtain ⟨n, hn⟩ := todo2 Y.2.1
     have : n ∈ H i := by
-      rw [← @Set.singleton_subset_iff, hn]
+      rw [← @Set.singleton_subset_iff, ← hn]
       exact hY
 
     calc c Y
-      _ = c ⟨{n}, singleton_abcd n⟩ := by rw [← Subtype.coe_eq_of_eq_mk (id hn.symm)]
+      _ = c ⟨{n}, singleton_abcd n⟩ := by rw [← Subtype.coe_eq_of_eq_mk hn]
       _ = i := this
 
   have that :  (Set.univ : Set ℕ) = H 0 ∪ H 1 := by
@@ -207,7 +211,7 @@ lemma pigeonhole_principle : arrows ℵ₀ 1 (Set.univ : Set ℕ) (Fin 2) := by
       · left
         exact hyp
       · right
-        exact todo1 (c ⟨{n}, singleton_abcd n⟩) hyp
+        exact fuckinghellthisshouldbeeasy (c ⟨{n}, singleton_abcd n⟩) hyp
     · intro
       exact trivial
 

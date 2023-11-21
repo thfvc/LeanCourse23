@@ -33,7 +33,9 @@ example {a b : ℝ} (h : (0 : ℝ) ∉ [[a, b]]) : ∫ x in a..b, 1 / x = log (b
   integral_one_div h
 
 example (a b : ℝ) : ∫ x in a..b, exp (x + 3) = exp (b + 3) - exp (a + 3) := by
-  sorry
+  rw [intervalIntegral.integral_comp_add_right]
+  exact integral_exp
+
 
 
 /- We have the fundamental theorem of calculus in Lean. -/
@@ -48,16 +50,25 @@ example {f : ℝ → ℝ} {a b : ℝ} {f' : ℝ → ℝ} (h : ∀ x ∈ [[a, b]]
 
 /- We can use this to compute integrals if we know the antiderivative. -/
 
+
+/-
 example (a b : ℝ) : ∫ x in a..b, 2 * x * exp (x ^ 2) =
     exp (b ^ 2) - exp (a ^ 2) := by
   have h1 : ∀ x ∈ [[a, b]], HasDerivAt
     (fun x ↦ exp (x ^ 2))
     (2 * x * exp (x ^ 2)) x
-  · sorry
+  · intro x hx
+    rw [show 2 * x * exp (x ^ 2) = exp (x ^ 2) * (2 * x) by ring]
+    have := @HasDerivAt.comp
+    apply HasDerivAt.comp (h₂ := exp) (h := fun x ↦ x ^ 2)
+    · exact hasDerivAt_exp (x ^ 2)
+    · convert hasDerivAt_pow 2 x
+      simp
   have h2 : IntervalIntegrable (fun x ↦ 2 * x * exp (x ^ 2)) volume a b
-  · sorry
-  sorry
-
+  · apply Continuous.intervalIntegrable
+    continuity
+  exact intervalIntegral.integral_eq_sub_of_hasDerivAt h1 h2
+-/
 
 /- If you `open Convolution`, you get the convolution of two functions. -/
 
@@ -134,7 +145,9 @@ example : BorelSpace ℝ := by infer_instance
 Remark: `rw` will not rewrite inside a binder (like `fun x`, `∃ x`, `∫ x` or `∀ᶠ x`). Use
 `simp_rw`, `simp only` or `unfold` instead. -/
 example : ∀ᵐ x : ℝ, Irrational x := by
-  sorry
+  unfold Irrational
+  refine Countable.ae_not_mem ?h volume
+  exact countable_range Rat.cast
 
 
 
@@ -148,7 +161,9 @@ example : ∀ᵐ x : ℝ, Irrational x := by
 #check Integrable
 
 example : ¬ Integrable (fun x ↦ 1 : ℝ → ℝ) := by
-  sorry
+  --intro h
+  rw [integrable_const_iff] --at h
+  simp --at h
 
 
 
