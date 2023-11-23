@@ -17,6 +17,12 @@ lemma abcd_monotone {A' : Type*} {n : ℕ} {A : Set A'} (Y : abcd A n) : Subtype
   rw [Y.2] at this
   exact this
 
+universe u
+
+lemma abcd_inj {A A' : Type u} {n : ℕ} {f : A → A'} (hf: f.Injective) (Y : abcd A n) : f '' Y.1 ∈ abcd A' n := by
+  have : # (f '' Y.1) = # Y := mk_image_eq hf
+  rw [Y.2] at this
+  exact this
 /-
 @[simp] lemma abcd_monotone' {X : Type*} {ν : Cardinal} {B C Y: Set X} (hB : Y ⊆ B) (hY : Y ∈ abcd ν C) :
   Y ∈ abcd ν B := ⟨hY.1, hB⟩
@@ -47,6 +53,86 @@ def arrows_card (lambda κ : Cardinal) (n : ℕ) (μ : Cardinal) : Prop :=
 lemma nice_iso_left {X X' : Type u1} {μ : Type*} (κ : Cardinal) (n : ℕ) (A : Set X) (A' : Set X') (f : X → X') (hf : f.Bijective)
   (h : arrows κ n A μ) : arrows κ n A' μ := by sorry
 -/
+
+-- universe u
+
+-- example {A B : Type u} (h : # A = #B) : Nonempty (A ≃ B) := by exact Cardinal.eq.mp
+#check Function.RightInverse
+#check Cardinal.eq
+
+
+--this lemma could be useful: If we have two types which are in an arrows relation, that relation can be extended to all types
+--of the same cardinality
+lemma arrows_card_of_arrows_type {A : Type*} {κ : Cardinal} {n : ℕ} {B : Type*} (h: arrows_type A κ n B) :
+    arrows_card (# A) κ n (# B) := by
+  intro A' B' hA' hB' c
+
+  obtain ⟨F, f, hF, hf⟩ := Cardinal.eq.mp hA'
+  obtain ⟨g, G, hg, hG⟩ := Cardinal.eq.mp hB'
+
+  let f' (Y : abcd A n) : abcd A' n := ⟨f '' Y, by
+    apply abcd_inj
+    exact Function.LeftInverse.injective hf
+    ⟩
+
+
+  obtain ⟨H, hH⟩ := h (g ∘ c ∘ f')
+
+
+
+  let H' := f '' H
+  use H'
+  constructor
+  · rw [← hH.1]
+    apply mk_image_eq
+    exact Function.LeftInverse.injective hf
+  · obtain ⟨i, hi⟩ := hH.2
+    use G i
+    intro Y' hY'
+
+    let Y : abcd A n := ⟨F '' Y', by
+      apply abcd_inj
+      exact Function.LeftInverse.injective hF⟩
+    have hY₁ : Y.1 ⊆ H := by
+      intro y hy
+      obtain ⟨y', hy'⟩ := hy
+      specialize hY' hy'.1
+      obtain ⟨x, hx⟩ := hY'
+      rw [← hx.2, hf] at hy'
+      rw [hy'.2] at hx
+
+      exact hx.1
+
+    have hY₂ : f' Y = Y' := by
+      ext y'
+      constructor
+      · intro hy'
+        obtain ⟨y, hy⟩ := hy'
+        obtain ⟨x, hx⟩ := hy.1
+        rw [← hy.2, ← hx.2, hF]
+        exact hx.1
+      · intro hy'
+        simp
+        use y'
+        constructor
+        · exact hy'
+        · exact hF y'
+
+    have : g (c Y') = g (G i) := by
+      calc g (c Y')
+        _ = g (c (f' Y)) := by rw [hY₂]
+        _ = (g ∘ c ∘ f') Y := by simp
+        _ = i := by rw [← hi Y hY₁]
+        _ = g (G i) := by exact (hG i).symm
+
+    have that : g.Injective := by exact Function.LeftInverse.injective hg
+
+    exact that this
+
+
+
+
+
 
 
 lemma monotone_left (lambda lambda' κ : Cardinal) (n : ℕ) (μ : Cardinal) (hlambda : lambda ≤ lambda') :
@@ -301,6 +387,8 @@ lemma pigeonhole_principle : arrows_card ℵ₀ ℵ₀ 1 2 := by
 
   exact LT.lt.ne this hA
 
+
+-- WIP
 lemma ramsey_two (n : ℕ) : arrows_card ℵ₀ ℵ₀ n 2 := by
 
 
@@ -314,7 +402,7 @@ lemma ramsey_two (n : ℕ) : arrows_card ℵ₀ ℵ₀ n 2 := by
 
     have ih' (a : A) (A₀ : Set A) (h : # A₀ = ℵ₀) : arrows_type (A₀ \ {a} : Set A) ℵ₀ n B := by
       apply hn
-      · sorry --TODO
+      · sorry --TODO, statement I want is something like "An infinite set minus a finite set is still an infinite set"
       · exact hB
 
     let c' (a : A) (A₀ : Set A) (Y : abcd (A₀ \ {a} : Set A) n ) := c ⟨insert a Y.1, by
@@ -334,7 +422,7 @@ lemma ramsey_two (n : ℕ) : arrows_card ℵ₀ ℵ₀ n 2 := by
       norm_cast at this
       ⟩
 
-    let min (A₀ : Set A) (hA : # A₀ = ℵ₀) : {a : A // a ∈ A₀ ∧ ∀ b ∈ A₀, a = b} := sorry--a ≤ b} := by sorry
+    let min (A₀ : Set A) (hA : # A₀ = ℵ₀) : {a : A // a ∈ A₀ ∧ ∀ b ∈ A₀, a = b} := sorry--a ≤ b} := by sorry, need to apply well-ordering theorem (or rephrase this proof just for ℕ and Fin 2, and then do this with the ordering on ℕ)
 
     --let select (A : Set ℕ) (hA : # A = ℵ₀) : ∃ (B : Set ℕ),
     let next' (A₀ : Set A) (hA₀ : # A₀ = ℵ₀) := (Exists.choose $ ih' (min A₀ hA₀) A₀ hA₀ (c' (min A₀ hA₀) A₀))
@@ -345,7 +433,6 @@ lemma ramsey_two (n : ℕ) : arrows_card ℵ₀ ℵ₀ n 2 := by
 
     let next_inf (A₀ : Set A) (hA₀ : # A₀ = ℵ₀) : # (next A₀ hA₀) = ℵ₀ := by
       rw [← next_inf' A₀ hA₀]
-      --simp
       apply mk_image_eq
       exact Subtype.coe_injective
 
