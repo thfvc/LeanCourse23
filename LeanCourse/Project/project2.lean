@@ -1,16 +1,14 @@
 import Mathlib.SetTheory.Cardinal.Basic
 import Mathlib.SetTheory.Cardinal.Ordinal
 import Mathlib.SetTheory.Cardinal.Cofinality
-import Mathlib.SetTheory.Cardinal.Finite
 
 open Ordinal
 open Cardinal
 open Set
 
---def abcd (X : Type*) (n : ℕ) : Set (Finset X) := {Y | Y.card = n} --TODO: rename this
+def abcd {X : Type*} (s : Set X) (ν : Cardinal) : Set (Set X) := {Y | Y ⊆ s ∧ # Y = ν} --TODO: rename this
 
---def abcd    (X : Type*) (ν : Cardinal) : Set (Set X) := {Y | Nat.card Y = ν} --TODO: rename this
-def abcd (X : Type*) (ν : Cardinal) : Set (Set X) := {Y | # Y = ν}
+def abcd_type (X : Type*) (ν : Cardinal) : Set (Set X) := abcd (Set.univ : Set X) ν
 /-
 def abcd_le {X : Type*} (ν : Cardinal) (A : Set X) : Set (Set X) := {Y | # Y ≤ ν ∧ Y ⊆ A}
 
@@ -18,45 +16,41 @@ def abcd_lt {X : Type*} (ν : Cardinal) (A : Set X) : Set (Set X) := {Y | # Y < 
 -/
 
 
-lemma abcd_monotone {A' : Type*} {n : ℕ} {A : Set A'} (Y : abcd A n) : Subtype.val '' Y.1 ∈ abcd A' n := by
-  have : # (Subtype.val '' Y.1) = # Y := mk_image_eq Subtype.coe_injective
-  rw [Y.2] at this
-  exact this
+lemma abcd_monotone {X : Type*} {n : ℕ} {s₁ s₂ : Set X} (Y : abcd s₁ n) (h : s₁ ⊆ s₂): Y.1 ∈ abcd s₂ n := by
+  constructor
+  · exact subset_trans Y.2.1 h
+  · exact Y.2.2
 
-lemma abcd_inj {A A' : Type*} {n : ℕ} {f : A → A'} (hf: f.Injective) {Y : abcd A n} : f '' Y.1 ∈ abcd A' n := by
-  have : lift.{u_1, u_2} # (f '' Y.1) = lift.{u_2, u_1} # Y := mk_image_eq_lift f Y.1 hf
-  rw [Y.2] at this
-  simp at this
-  exact this
+lemma abcd_inj.{u} {X X' : Type u} {n : ℕ} {f : X → X'} (hf: f.Injective) (Y : abcd_type X n) : f '' Y.1 ∈ abcd_type X' n := by
+  constructor
+  · exact subset_univ (f '' ↑Y)
+  · simp_rw [← Y.2.2]
+    exact mk_image_eq hf
+
+
 /-
 @[simp] lemma abcd_monotone' {X : Type*} {ν : Cardinal} {B C Y: Set X} (hB : Y ⊆ B) (hY : Y ∈ abcd ν C) :
   Y ∈ abcd ν B := ⟨hY.1, hB⟩
 
 -/
-#print abcd
-
-#check Fin 2
-
-def coloring (X : Type*) (n : ℕ) (μ : Type*) := (abcd X n) → μ
-
-#print coloring
+def coloring {X : Type*} (s : Set X) (n : ℕ) (μ : Type*) := (abcd s n) → μ
 
 example {X : Type*} (A A' : Set X) : A ∩ A' ⊆ A := by exact Set.inter_subset_left A A'
 
-def homogeneous_of_color {X μ : Type*} {n : ℕ} (c : coloring X n μ) (H : Set X) (i : μ)  : Prop :=
-  ∀ Y : abcd X n, Y.1 ⊆ H →  c Y  = i
+def homogeneous_of_color {X μ : Type*} {s : Set X} {n : ℕ} (c : coloring s n μ) (H : Set X) (i : μ)  : Prop :=
+  ∀ Y : abcd s n, Y.1 ⊆ H →  c Y  = i
 
-def homogeneous {A B : Type*} {n : ℕ} (c : coloring A n B) (H : Set A) : Prop :=
+def homogeneous {A B : Type*} {s : Set A} {n : ℕ} (c : coloring s n B) (H : Set A) : Prop :=
   ∃ i : B, homogeneous_of_color c H i
 
-def arrows_type (A : Type*) (κ : Cardinal) (n : ℕ) (B : Type*) : Prop :=
-  ∀ (c : coloring A n B), ∃ H : Set A, # H = κ ∧ homogeneous c H
+def arrows_concrete {A : Type*} (s : Set A) (κ : Cardinal) (n : ℕ) (B : Type*) : Prop :=
+  ∀ (c : coloring s n B), ∃ H : Set A, H ⊆ s ∧ # H = κ ∧ homogeneous c H
 
-def arrows_card (lambda κ : Cardinal) (n : ℕ) (μ : Cardinal) : Prop :=
-  ∀ (A B : Type*), # A = lambda → # B = μ → arrows_type A κ n B
+def arrows_abstract (lambda κ : Cardinal) (n : ℕ) (μ : Cardinal) : Prop :=
+  ∀ (A B : Type*), ∀ s : Set A, # s = lambda → # B = μ → arrows_concrete s κ n B
 /-
 lemma nice_iso_left {X X' : Type u1} {μ : Type*} (κ : Cardinal) (n : ℕ) (A : Set X) (A' : Set X') (f : X → X') (hf : f.Bijective)
-  (h : arrows κ n A μ) : arrows κ n A' μ := by s0rry
+  (h : arrows κ n A μ) : arrows κ n A' μ := by sorry
 -/
 
 -- universe u
@@ -66,18 +60,22 @@ lemma nice_iso_left {X X' : Type u1} {μ : Type*} (κ : Cardinal) (n : ℕ) (A :
 #check Cardinal.eq
 
 
-lemma arrows_type_bij.{u} {A A' : Type u} {κ : Cardinal} {n : ℕ} {B B' : Type*} (f : Equiv A A') (g : Equiv B B') :
-    arrows_type A κ n B → arrows_type A' κ n B' := by
-  intro h c
+--this lemma could be useful: If we have two types which are in an arrows relation, that relation can be extended to all types
+--of the same cardinality
+lemma arrows_abstract_of_arrows_concrete {A : Type*} {s : Set A} {κ : Cardinal} {n : ℕ} {B : Type*} (h: arrows_concrete s κ n B) :
+    arrows_abstract (# s) κ n (# B) := by
+  intro A' B' s' hA' hB' c
 
+  obtain ⟨F, f, hF, hf⟩ := Cardinal.eq.mp hA'
+  obtain ⟨g, G, hg, hG⟩ := Cardinal.eq.mp hB'
 
-
-  let f' (Y : abcd A n) : abcd A' n := ⟨f.toFun '' Y, by
+  let f' (Y : abcd s n) : abcd s' n := ⟨f '' Y.1, by
     apply abcd_inj
-    exact f.left_inv.injective --Function.LeftInverse.injective f.
+    exact Function.LeftInverse.injective hf
     ⟩
 
-  obtain ⟨H, hH⟩ := h (g.invFun ∘ c ∘ f')
+
+  obtain ⟨H, hH⟩ := h (g ∘ c ∘ f')
 
 
 
@@ -86,21 +84,20 @@ lemma arrows_type_bij.{u} {A A' : Type u} {κ : Cardinal} {n : ℕ} {B B' : Type
   constructor
   · rw [← hH.1]
     apply mk_image_eq
-    exact Function.LeftInverse.injective f.left_inv
+    exact Function.LeftInverse.injective hf
   · obtain ⟨i, hi⟩ := hH.2
-    use g.toFun i
+    use G i
     intro Y' hY'
 
-    let Y : abcd A n := ⟨f.invFun '' Y', by
+    let Y : abcd A n := ⟨F '' Y', by
       apply abcd_inj
-      exact Function.LeftInverse.injective f.right_inv⟩
+      exact Function.LeftInverse.injective hF⟩
     have hY₁ : Y.1 ⊆ H := by
       intro y hy
       obtain ⟨y', hy'⟩ := hy
       specialize hY' hy'.1
       obtain ⟨x, hx⟩ := hY'
-      rw [← hx.2] at hy'
-      simp at hy'
+      rw [← hx.2, hf] at hy'
       rw [hy'.2] at hx
 
       exact hx.1
@@ -111,33 +108,25 @@ lemma arrows_type_bij.{u} {A A' : Type u} {κ : Cardinal} {n : ℕ} {B B' : Type
       · intro hy'
         obtain ⟨y, hy⟩ := hy'
         obtain ⟨x, hx⟩ := hy.1
-        rw [← hy.2, ← hx.2]
-        simp
+        rw [← hy.2, ← hx.2, hF]
         exact hx.1
       · intro hy'
         simp
-        exact hy'
+        use y'
+        constructor
+        · exact hy'
+        · exact hF y'
 
-    have : g.invFun (c Y') = g.invFun (g.toFun i) := by
-      calc g.invFun (c Y')
-        _ = g.invFun (c (f' Y)) := by rw [hY₂]
-        _ = (g.invFun ∘ c ∘ f') Y := by simp
+    have : g (c Y') = g (G i) := by
+      calc g (c Y')
+        _ = g (c (f' Y)) := by rw [hY₂]
+        _ = (g ∘ c ∘ f') Y := by simp
         _ = i := by rw [← hi Y hY₁]
-        _ = g.invFun (g.toFun i) := by simp
+        _ = g (G i) := by exact (hG i).symm
 
-    simp at this
-    rw [← this]
-    simp
---this lemma could be useful: If we have two types which are in an arrows relation, that relation can be extended to all types
---of the same cardinality
-lemma arrows_card_of_arrows_type {A : Type*} {κ : Cardinal} {n : ℕ} {B : Type*} (h: arrows_type A κ n B) :
-    arrows_card (# A) κ n (# B) := by
-  intro A' B' hA' hB'
+    have that : g.Injective := by exact Function.LeftInverse.injective hg
 
-  obtain ⟨f⟩ := Cardinal.eq.mp hA'.symm
-  obtain ⟨g⟩ := Cardinal.eq.mp hB'.symm
-
-  exact arrows_type_bij f g h
+    exact that this
 
 
 lemma arrows_card_iff_arrows_type {A : Type*} {κ : Cardinal} {n : ℕ} {B : Type*} :
@@ -346,124 +335,7 @@ lemma arrows_of_n_leq_kappa {lambda κ : Cardinal} {n : ℕ} {μ : Cardinal} (nl
           _ < n := κltn
       contradiction
 
-#check lift_umax_eq
 
-lemma arrows_card_lift'.{u}
-    {A : Type*}
-    {κ : Cardinal} {n : ℕ} {B : Type*} (h : arrows_type A κ n B) :
-    arrows_type (ULift.{u} A) (lift.{u} κ) n B := by
-  intro c'
-
-  let f (a : A) : ULift.{u} A := { down := a}
-
-  have f_inj : f.Injective := by exact ULift.up_injective
-
-  let c (Y : abcd A n) : B := (c' ⟨f '' Y, abcd_inj f_inj⟩)
-
-  obtain ⟨H, hH⟩ := h c
-
-  let H' := f '' H
-
-  use H'
-
-  constructor
-  · have : lift.{u} # H' = lift.{max u1 u3, u} # H := by
-      apply mk_image_eq_lift
-      · exact f_inj
-    have that : lift.{u1, max u1 u3} # H' = # H' := by
-      exact Cardinal.lift_id'.{u1, u3} #H'
-    rw [← that]
-    rw [this]
-    rw [hH.1]
-    simp
-    rw [Cardinal.lift_umax'.{u1, u3}]
-  · obtain ⟨i, hi⟩ := hH.2
-    use { down := i}
-    intro Y' hY'
-    let Y := f ⁻¹' Y'
-    have hY₁ : Y ⊆ H := by
-      intro a ha
-      exact (Function.Injective.mem_set_image f_inj).mp (hY' ha)
-    have hY₂ : # Y = n := by
-      sorry
-    specialize hi ⟨Y, hY₂⟩ hY₁
-    have hY'' : Y' = ⟨f '' Y, sorry⟩ := by sorry
-    rw [hY'']
-    rw [← hi]
-
-
-
-
-lemma arrows_card_lift.{u1, u2, u3, u4} {lambda κ : Cardinal.{u1}} {n : ℕ} {μ : Cardinal.{u2}} (h : arrows_card lambda κ n μ) :
-    arrows_card (lift.{u3, u1} lambda) (lift.{u3, u1} κ) n (lift.{u4, u2} μ) := by
-  let A := Quotient.out lambda
-  let B := Quotient.out μ
-
-  have cardA : # A = lambda := mk_out lambda
-  have cardB : # B = μ := mk_out μ
-
-  let A' := ULift.{u3, u1} A
-  let κ' := lift.{u3, u1}  κ
-  let B' := ULift.{u4, u2} B
-
-  have : arrows_type A' κ' n B' := by
-    intro c'
-
-    let f (a : A) : A' := { down := a}
-
-    have f_inj : f.Injective := by exact ULift.up_injective
-
-    let c (Y : abcd A n) : B := (c' ⟨f '' Y, abcd_inj f_inj⟩).down
-
-    obtain ⟨H, hH⟩ := h A B cardA cardB c
-
-    let H' := f '' H
-
-    use H'
-
-    constructor
-    · have : lift.{u1, max u1 u3} # H' = lift.{max u1 u3, u1} # H := by
-        apply mk_image_eq_lift
-        · exact f_inj
-      have that : lift.{u1, max u1 u3} # H' = # H' := by
-        exact Cardinal.lift_id'.{u1, u3} #H'
-      rw [← that]
-      rw [this]
-      rw [hH.1]
-      simp
-      rw [Cardinal.lift_umax'.{u1, u3}]
-    · obtain ⟨i, hi⟩ := hH.2
-      use { down := i}
-      intro Y' hY'
-      let Y := f ⁻¹' Y'
-      have hY₁ : Y ⊆ H := by
-        intro a ha
-        exact (Function.Injective.mem_set_image f_inj).mp (hY' ha)
-      have hY₂ : # Y = n := by
-        sorry
-      specialize hi ⟨Y, hY₂⟩ hY₁
-      have hY'' : Y' = ⟨f '' Y, sorry⟩ := by sorry
-      rw [hY'']
-      rw [← hi]
-
-
-
-  have cardA' : # A' = lift.{u3, u1} lambda := by
-    rw [← cardA]
-    rfl
-  have cardB' : # B' = lift.{u4, u2} μ := by
-    rw [← cardB]
-    rfl
-
-  rw [← cardA', ← cardB']
-
-  exact arrows_card_iff_arrows_type.mp this
-
-
-lemma arrows_card_lift_left.{u1, u2} {lambda κ : Cardinal.{u1}} {n : ℕ} {μ : Cardinal} (h : arrows_card lambda κ n μ) :
-    arrows_card (lift.{u2} lambda) (lift.{u2} κ) n μ := by
-  rw [← lift_id μ]
-  exact arrows_card_lift h
 -- lemma monotone_right (lambda κ : Cardinal) (n : ℕ) {μ μ' : Cardinal} (hμ' : μ' ≤ μ) :
 --     arrows_card lambda κ n μ → arrows_card lambda κ n μ' := sorry
 
@@ -602,22 +474,18 @@ noncomputable def min (X : Set ℕ) : ℕ := sInf X
 
 
 -- WIP
-lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ₀ : Cardinal.{u1}) n (2 : Cardinal.{u2}):= by
-  rw [← lift_aleph0.{0, u1}]
-  rw [← lift_two.{u2, 0}]
-  --rw [← Cardinal.lift_id.{0} (2 : Cardinal.{u2})]
-  apply arrows_card_lift
+lemma ramsey_two (n : ℕ) : arrows_card (ℵ₀ : Cardinal) ℵ₀ n 2 := by
+
   induction n
   case zero => exact rathole_principle
   case succ n hn =>
-    nth_rw 1 [← mk_nat]
-    rw [← show ((2 : ℕ) : Cardinal) = 2 from rfl, ← mk_fin 2]
     apply arrows_card_of_arrows_type
   --   rw [Nat.succ_eq_add_one]
     intro c
 
     --have ih' (A : Set ℕ) : arrows ℵ₀ n A (Fin 2) := sorry -- monotone_left (Set.subset_univ A) hn
-    have ih' (a : ℕ) (A : Set ℕ) (h : # A = ℵ₀) : arrows_type (A \ {a} : Set ℕ) ℵ₀ n (Fin 2) := by
+    let N := ULift.{u_1, 0} ℕ
+    have ih' (a : N) (A : Set N) (h : # A = ℵ₀) : arrows_type (A \ {a} : Set N) ℵ₀ n (ULift.{u_2, 0} $ Fin 2) := by
       apply hn
       · apply le_antisymm
         · exact mk_le_aleph0
@@ -625,12 +493,12 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
           simp
           rw [← mk_singleton a, ← h]
           exact le_mk_diff_add_mk A {a}
-      · exact mk_fin 2
+      · rfl
 
-    let f (a : ℕ) (A : Set ℕ) (Y : abcd (A \ {a} : Set ℕ) n) : abcd ℕ (Nat.succ n) := ⟨insert a (Subtype.val '' Y.1), by
+    let f (a : N) (A : Set N) (Y : abcd (A \ {a} : Set N) n) : abcd N (Nat.succ n) := ⟨insert a (Subtype.val '' Y.1), by
       -- have cardY : # Y.1 = n := Y.2
       -- simp_rw [cardY]
-      have : # (insert a (Subtype.val '' Y.1) : Set ℕ) = n + 1 := by
+      have : # (insert a (Subtype.val '' Y.1) : Set N) = n + 1 := by
         have : # (Subtype.val '' Y.1) = n := by
           have := Y.2
           simp_rw [Y.2.symm]
@@ -646,16 +514,16 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
       push_cast
       exact this⟩
 
-    let c' (a : ℕ) (A : Set ℕ) (Y : abcd (A \ {a} : Set ℕ) n ) := c $ f a A Y
+    let c' (a : N) (A : Set N) (Y : abcd (A \ {a} : Set N) n ) := c $ f a A Y
 
-    let min (A : Set ℕ) (hA : # A = ℵ₀) : {a : ℕ // a ∈ A ∧ ∀ b ∈ A, a ≤ b} := sorry--a ≤ b} := by sorry, need to apply well-ordering theorem (or rephrase this proof just for ℕ and Fin 2, and then do this with the ordering on ℕ)
+    let min (A : Set N) (hA : # A = ℵ₀) : {a : N // a ∈ A ∧ ∀ b ∈ A, a.down ≤ b.down} := sorry--a ≤ b} := by sorry, need to apply well-ordering theorem (or rephrase this proof just for ℕ and Fin 2, and then do this with the ordering on ℕ)
 
   --   --let select (A : Set ℕ) (hA : # A = ℵ₀) : ∃ (B : Set ℕ),
-    let next (A : Set ℕ) (hA : # A = ℵ₀) : Set ℕ := Subtype.val '' (Exists.choose $ ih' (min A hA) A hA (c' (min A hA) A))
+    let next (A : Set N) (hA : # A = ℵ₀) : Set N := Subtype.val '' (Exists.choose $ ih' (min A hA) A hA (c' (min A hA) A))
 
     --let next (A : Set N) (hA : # A = ℵ₀) : Set N := Subtype.val '' next' A hA
 
-    let next_inf (A : Set ℕ) (hA : # A = ℵ₀) : # (next A hA) = ℵ₀ := by --(Exists.choose_spec $ ih' (min A₀ hA₀) A₀ hA₀ (c' (min A₀ hA₀) A₀)).1
+    let next_inf (A : Set N) (hA : # A = ℵ₀) : # (next A hA) = ℵ₀ := by --(Exists.choose_spec $ ih' (min A₀ hA₀) A₀ hA₀ (c' (min A₀ hA₀) A₀)).1
       rw [← (Exists.choose_spec $ ih' (min A hA) A hA (c' (min A hA) A)).1]
       exact mk_image_eq Subtype.coe_injective
 
@@ -665,17 +533,18 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
   --     exact Subtype.coe_injective
 
 
-    let rec seq : (k : ℕ) → {A : Set ℕ // # A = ℵ₀}
-      | 0 => ⟨(Set.univ : Set ℕ), by
-          rw [@mk_univ, mk_nat]⟩
+    let rec seq : (k : ℕ) → {A : Set N // # A = ℵ₀}
+      | 0 => ⟨(Set.univ : Set N), by
+          rw [@mk_univ]
+          rfl⟩
       | k + 1 => ⟨next (seq k) (seq k).2, next_inf (seq k) (seq k).2⟩
 
-    let a (k : ℕ) : ℕ := min (seq k).1 (seq k).2
+    let a (k : ℕ) : N := min (seq k).1 (seq k).2
 
     let R := range a
 
   --   --have {Y : Set ℕ} (hY : Y ∈  abcd (Nat.succ n) A) (k : ℕ) (h : ∀ c ∈ Y, a k ≤ c) : c $ abcd_monotone (subset_univ A) hY = 0
-    --have {Y : Set ℕ} (hY₁ : # Y = Nat.succ n) (k : ℕ) (hk : k ∈ Y) (h : ∀ l ∈ Y, a k ≤ a l) : sorry := sorry
+
   --   --have {Y : abcd A n} {k : ℕ} (hY : Y.1 ⊆ R) (ha₁ : a ∈ Y.1) (ha₂ : ∀ b ∈ Y.1, a ≤ b) :
     sorry
 

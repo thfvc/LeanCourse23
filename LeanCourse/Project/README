@@ -1,0 +1,9 @@
+(this is my own readme, so I and others can understand what I am doing in this folder)
+
+project.lean contains my current main approach, where we consider the type of all sets of a certain cardinality in some type
+project2.lean contains the alternative approach, where we consider the type of all subsets of some set of a certain cardinality
+
+from a set-theoretic perspective these two approaches are clearly equivalent, however they both have their advantages / disadvantages:
+
+advantages of sets:
+-with sets we can directly use functions from the given type to another type, see for example the current state of the lemma that states, that one example is enough to understand the behaviour of the arrows relation on some cardinality.
