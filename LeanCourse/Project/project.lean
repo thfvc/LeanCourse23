@@ -7,18 +7,7 @@ open Ordinal
 open Cardinal
 open Set
 
---set_option pp.universes true
-
---def abcd (X : Type*) (n : ℕ) : Set (Finset X) := {Y | Y.card = n} --TODO: rename this
-
---def abcd    (X : Type*) (ν : Cardinal) : Set (Set X) := {Y | Nat.card Y = ν} --TODO: rename this
 def abcd (X : Type*) (ν : Cardinal) : Set (Set X) := {Y | # Y = ν}
-/-
-def abcd_le {X : Type*} (ν : Cardinal) (A : Set X) : Set (Set X) := {Y | # Y ≤ ν ∧ Y ⊆ A}
-
-def abcd_lt {X : Type*} (ν : Cardinal) (A : Set X) : Set (Set X) := {Y | # Y < ν ∧ Y ⊆ A}
--/
-
 
 lemma abcd_monotone {A' : Type*} {n : ℕ} {A : Set A'} (Y : abcd A n) : Subtype.val '' Y.1 ∈ abcd A' n := by
   have : # (Subtype.val '' Y.1) = # Y := mk_image_eq Subtype.coe_injective
@@ -30,18 +19,8 @@ lemma abcd_inj {A A' : Type*} {n : ℕ} {f : A → A'} (hf: f.Injective) {Y : ab
   rw [Y.2] at this
   simp at this
   exact this
-/-
-@[simp] lemma abcd_monotone' {X : Type*} {ν : Cardinal} {B C Y: Set X} (hB : Y ⊆ B) (hY : Y ∈ abcd ν C) :
-  Y ∈ abcd ν B := ⟨hY.1, hB⟩
-
--/
-#print abcd
-
-#check Fin 2
 
 def coloring (X : Type*) (n : ℕ) (μ : Type*) := (abcd X n) → μ
-
-#print coloring
 
 example {X : Type*} (A A' : Set X) : A ∩ A' ⊆ A := by exact Set.inter_subset_left A A'
 
@@ -54,34 +33,22 @@ def homogeneous {A B : Type*} {n : ℕ} (c : coloring A n B) (H : Set A) : Prop 
 def arrows_type (A : Type*) (κ : Cardinal) (n : ℕ) (B : Type*) : Prop :=
   ∀ (c : coloring A n B), ∃ H : Set A, # H = κ ∧ homogeneous c H
 
+
+-- A note on notation: The source I adapted used λ as a cardinal. Due to lambda terms I was unable to do so. Instead we use lambda.
+-- TODO: think of way to fix this
 def arrows_card (lambda κ : Cardinal) (n : ℕ) (μ : Cardinal) : Prop :=
   ∀ (A B : Type*), # A = lambda → # B = μ → arrows_type A κ n B
-/-
-lemma nice_iso_left {X X' : Type u1} {μ : Type*} (κ : Cardinal) (n : ℕ) (A : Set X) (A' : Set X') (f : X → X') (hf : f.Bijective)
-  (h : arrows κ n A μ) : arrows κ n A' μ := by s0rry
--/
-
--- universe u
-
--- example {A B : Type u} (h : # A = #B) : Nonempty (A ≃ B) := by exact Cardinal.eq.mp
-#check Function.RightInverse
-#check Cardinal.eq
-
 
 lemma arrows_type_bij.{u} {A A' : Type u} {κ : Cardinal} {n : ℕ} {B B' : Type*} (f : Equiv A A') (g : Equiv B B') :
     arrows_type A κ n B → arrows_type A' κ n B' := by
   intro h c
 
-
-
   let f' (Y : abcd A n) : abcd A' n := ⟨f.toFun '' Y, by
     apply abcd_inj
-    exact f.left_inv.injective --Function.LeftInverse.injective f.
+    exact f.left_inv.injective
     ⟩
 
   obtain ⟨H, hH⟩ := h (g.invFun ∘ c ∘ f')
-
-
 
   let H' := f '' H
   use H'
@@ -130,6 +97,8 @@ lemma arrows_type_bij.{u} {A A' : Type u} {κ : Cardinal} {n : ℕ} {B B' : Type
     simp at this
     rw [← this]
     simp
+
+
 --this lemma could be useful: If we have two types which are in an arrows relation, that relation can be extended to all types
 --of the same cardinality
 lemma arrows_card_of_arrows_type {A : Type*} {κ : Cardinal} {n : ℕ} {B : Type*} (h: arrows_type A κ n B) :
@@ -149,9 +118,6 @@ lemma arrows_card_iff_arrows_type {A : Type*} {κ : Cardinal} {n : ℕ} {B : Typ
     exact arrows_card_of_arrows_type h
   · intro h
     exact h A B rfl rfl
-
-
-
 
 lemma monotone_left (lambda lambda' κ : Cardinal) (n : ℕ) (μ : Cardinal) (hlambda : lambda ≤ lambda') :
     arrows_card lambda κ n μ → arrows_card lambda' κ n μ := by
@@ -219,10 +185,6 @@ lemma monotone_left (lambda lambda' κ : Cardinal) (n : ℕ) (μ : Cardinal) (hl
       _ = c ⟨Y, hY₁⟩ := by rfl
       _ = i := by exact hi { val := Y, property := hY₁ } hY₂
 
-
-#check Equiv.ulift
-#check Cardinal.le_mk_iff_exists_subset
-
 lemma monotone_card (lambda κ κ' : Cardinal) (n : ℕ) (μ : Cardinal) (hκ : κ' ≤ κ):
     arrows_card lambda κ n μ → arrows_card lambda κ' n μ := by
   intro h A B hA hB
@@ -281,14 +243,13 @@ lemma monotone_right_nontrivial {lambda κ : Cardinal} {n : ℕ} (μ μ' : Cardi
     intro Y hY
     apply hf
 
-    have : ∃ i' : B', f i' = i := by -- this needs something like κ ≥ n I think
+    have : ∃ i' : B', f i' = i := by
       rw [← hH.1] at hnκ
       obtain ⟨Y, hY⟩ := le_mk_iff_exists_subset.mp hnκ
       let i' := c ⟨Y, hY.2⟩
       use i'
       apply hi
       exact hY.1
-
 
     calc f (c Y)
       _ = (f ∘ c) Y := rfl
@@ -348,54 +309,7 @@ lemma arrows_of_n_leq_kappa {lambda κ : Cardinal} {n : ℕ} {μ : Cardinal} (nl
           _ < n := κltn
       contradiction
 
-#check lift_umax_eq
-
--- lemma arrows_card_lift'.{u}
---     {A : Type*}
---     {κ : Cardinal} {n : ℕ} {B : Type*} (h : arrows_type A κ n B) :
---     arrows_type (ULift.{u} A) (lift.{u} κ) n B := by
---   intro c'
-
---   let f (a : A) : ULift.{u} A := { down := a}
-
---   have f_inj : f.Injective := by exact ULift.up_injective
-
---   let c (Y : abcd A n) : B := (c' ⟨f '' Y, abcd_inj f_inj⟩)
-
---   obtain ⟨H, hH⟩ := h c
-
---   let H' := f '' H
-
---   use H'
-
---   constructor
---   · have : lift.{u} # H' = lift.{max u1 u3, u} # H := by
---       apply mk_image_eq_lift
---       · exact f_inj
---     have that : lift.{u1, max u1 u3} # H' = # H' := by
---       exact Cardinal.lift_id'.{u1, u3} #H'
---     rw [← that]
---     rw [this]
---     rw [hH.1]
---     simp
---     rw [Cardinal.lift_umax'.{u1, u3}]
---   · obtain ⟨i, hi⟩ := hH.2
---     use { down := i}
---     intro Y' hY'
---     let Y := f ⁻¹' Y'
---     have hY₁ : Y ⊆ H := by
---       intro a ha
---       exact (Function.Injective.mem_set_image f_inj).mp (hY' ha)
---     have hY₂ : # Y = n := by
---       sorry
---     specialize hi ⟨Y, hY₂⟩ hY₁
---     have hY'' : Y' = ⟨f '' Y, sorry⟩ := by sorry
---     rw [hY'']
---     rw [← hi]
-
-
-
-
+-- The bane of my existence, I never want to have to think about LEAN cardinals again
 lemma arrows_card_lift.{u1, u2, u3, u4} {lambda κ : Cardinal.{u1}} {n : ℕ} {μ : Cardinal.{u2}} (h : arrows_card lambda κ n μ) :
     arrows_card (lift.{u3, u1} lambda) (lift.{u3, u1} κ) n (lift.{u4, u2} μ) := by
   let A := Quotient.out lambda
@@ -472,45 +386,10 @@ lemma arrows_card_lift.{u1, u2, u3, u4} {lambda κ : Cardinal.{u1}} {n : ℕ} {�
     rw [hY'''']
     rw [← hi]
 
-
-
 lemma arrows_card_lift_left.{u1, u2} {lambda κ : Cardinal.{u1}} {n : ℕ} {μ : Cardinal} (h : arrows_card lambda κ n μ) :
     arrows_card (lift.{u2} lambda) (lift.{u2} κ) n μ := by
   rw [← lift_id μ]
   exact arrows_card_lift h
--- lemma monotone_right (lambda κ : Cardinal) (n : ℕ) {μ μ' : Cardinal} (hμ' : μ' ≤ μ) :
---     arrows_card lambda κ n μ → arrows_card lambda κ n μ' := sorry
-
--- lemma lemma_1_2 (A A' : Type u1) (κ κ' : Cardinal) (n : ℕ) (μ μ' : Type u2) (hA : # A ≤ # A') (hκ : κ' ≤ κ) (hμ : # μ' ≤ # μ) :
---     arrows A κ n μ → arrows A' κ' n μ' := by
---   intro h c
---   have : ∃ f : A → A', Function.Injective f := by sorry --this should follow from hA, but I cant find out how rn
---   obtain ⟨f, hf⟩ := this
---   have : ∃ g : μ' → μ, Function.Injective g := by sorry --see above, but with hμ
---   obtain ⟨g, hg⟩ := this
-
---   let F : abcd A n → abcd A' n := fun x ↦ ⟨f '' x, by
---     sorry⟩
-
---   have hF : F.Injective := by sorry
-
---   let c' (a : abcd A n) := g $ c $ F a
---   obtain ⟨H, hH⟩ := h c'
-
---   let H' := f '' H
-
---   use H'
---   constructor
---   · sorry
---   · sorry
-
-/-
-lemma lemma_1_3 (A : Type*) (κ : Cardinal) (n n' : ℕ) (μ: Type*) (hn : n' ≤ n) :
-    arrows A κ n μ → arrows A κ n' μ := by
-  intro h c'
-  sorry
--/
-
 
 lemma fin2_one_of_ne_two (x : Fin 2) (h : x ≠ 0) : x = 1 := by
   apply Fin.fin_two_eq_of_eq_zero_iff
@@ -532,6 +411,8 @@ lemma singleton_of_card_one {X : Type*} {A : Set X} (hA : # A = 1) : ∃ x : X, 
   · apply mk_le_one_iff_set_subsingleton.mp card_le_one
   · exact hx
 
+
+-- a (somewhat) trivial variant of the pigeonhole principle
 lemma rathole_principle : arrows_card ℵ₀ ℵ₀ 0 2 := by
   intro A B hA _ c
   use Set.univ
@@ -549,18 +430,20 @@ lemma rathole_principle : arrows_card ℵ₀ ℵ₀ 0 2 := by
       exact Y.2
     rw [this]
 
-example (A : Set ℕ) : A ⊆ (univ : Set ℕ) := by exact subset_univ A
+lemma singleton_abcd {A : Type*} (x : A) : {x} ∈ abcd A 1  := by
+    rw [abcd]
+    simp
 
-lemma pigeonhole_principle : arrows_card ℵ₀ ℵ₀ 1 2 := by
+
+-- this is how the usual pigeonhole principle (in its most basic form) looks in this context.
+-- Note: Since LEAN doesnt identify singleton sets and their contents, this lemma is (usually) less usable
+-- than the versions from Mathlib
+lemma pigeonhole_principle_abcd : arrows_card ℵ₀ ℵ₀ 1 2 := by
   intro A B hA hB
 
   intro c
   by_contra hyp
   push_neg at hyp
-
-  have singleton_abcd (x : A) : {x} ∈ abcd A 1  := by
-    rw [abcd]
-    simp
 
   let H (i : B) := {x : A | c ⟨{x}, singleton_abcd x⟩ = i}
 
@@ -612,8 +495,10 @@ lemma pigeonhole_principle : arrows_card ℵ₀ ℵ₀ 1 2 := by
 
   exact LT.lt.ne this hA
 
-noncomputable def min (X : Set ℕ) : ℕ := sInf X
 
+#check sInf
+#check Nat.sInf_mem
+#check monotone_nat_of_le_succ
 --lemma test (A : Set ℕ) (B : Set ℕ) (hA : # A = ℵ₀) (hB : # B < ℵ₀) : # A \ B = ℵ₀ := sorry
 
 
@@ -621,7 +506,6 @@ noncomputable def min (X : Set ℕ) : ℕ := sInf X
 lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ₀ : Cardinal.{u1}) n (2 : Cardinal.{u2}):= by
   rw [← lift_aleph0.{0, u1}]
   rw [← lift_two.{u2, 0}]
-  --rw [← Cardinal.lift_id.{0} (2 : Cardinal.{u2})]
   apply arrows_card_lift
   induction n
   case zero => exact rathole_principle
@@ -629,10 +513,8 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
     nth_rw 1 [← mk_nat]
     rw [← show ((2 : ℕ) : Cardinal) = 2 from rfl, ← mk_fin 2]
     apply arrows_card_of_arrows_type
-  --   rw [Nat.succ_eq_add_one]
     intro c
 
-    --have ih' (A : Set ℕ) : arrows ℵ₀ n A (Fin 2) := sorry -- monotone_left (Set.subset_univ A) hn
     have ih' (a : ℕ) (A : Set ℕ) (h : # A = ℵ₀) : arrows_type (A \ {b | b ≤ a} : Set ℕ) ℵ₀ n (Fin 2) := by
       apply hn
       · apply le_antisymm
@@ -643,7 +525,6 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
             apply (finite_le_nat a).subset
             simp
 
-          --simp at thingy
           have that : A.Finite := by
             have : A = {x | x ∈ A ∧ a < x} ∪ {b | b ∈ A ∧ b ≤ a} := by
               ext x
@@ -660,11 +541,9 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
             exact Set.Finite.union neg thingy
           apply that.not_infinite
           exact infinite_coe_iff.mp $ infinite_iff.mpr $ Eq.le (id h.symm)
-
-
       · exact mk_fin 2
 
-    let f (a : ℕ) (A : Set ℕ) (Y : abcd (A \ {a} : Set ℕ) n) : abcd ℕ (Nat.succ n) := ⟨insert a (Subtype.val '' Y.1), by
+    let f (a : ℕ) (A : Set ℕ) (Y : abcd (A \ {b | b ≤ a} : Set ℕ) n) : abcd ℕ (Nat.succ n) := ⟨insert a (Subtype.val '' Y.1), by
       -- have cardY : # Y.1 = n := Y.2
       -- simp_rw [cardY]
       have : # (insert a (Subtype.val '' Y.1) : Set ℕ) = n + 1 := by
@@ -683,73 +562,173 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
       push_cast
       exact this⟩
 
-    let c' (a : ℕ) (A : Set ℕ) (Y : abcd (A \ {a} : Set ℕ) n ) := c $ f a A Y
+    let c' (a : ℕ) (A : Set ℕ) (Y : abcd (A \ {b | b ≤ a} : Set ℕ) n ) := c $ f a A Y
 
-    let min (A : Set ℕ) (hA : # A = ℵ₀) : {a : ℕ // a ∈ A ∧ ∀ b ∈ A, a ≤ b} := sorry--a ≤ b} := by sorry, need to apply well-ordering theorem (or rephrase this proof just for ℕ and Fin 2, and then do this with the ordering on ℕ)
+    let mind (A : Set ℕ) (hA : # A = ℵ₀) : {a : ℕ // a ∈ A ∧ ∀ b ∈ A, a ≤ b} := { --maybe find better name for "mind", right now this is just to avoid confusion with the usual minimum
+      val := sInf A
+      property := by
+        constructor
+        · apply Nat.sInf_mem
+          apply nonempty_coe_sort.mp
+          rw [← mk_ne_zero_iff, hA]
+          exact aleph0_ne_zero
+        · exact fun b a ↦ Nat.sInf_le a
+    }
 
-  --   --let select (A : Set ℕ) (hA : # A = ℵ₀) : ∃ (B : Set ℕ),
-    let h_next (A : Set ℕ) (hA : # A = ℵ₀) := ih' (min A hA) A hA (c' (min A hA) A)
+    let h_next (A : Set ℕ) (hA : # A = ℵ₀) := ih' (mind A hA) A hA (c' (mind A hA) A)
 
-    --let next (A : Set N) (hA : # A = ℵ₀) : Set N := Subtype.val '' next' A hA
 
     let next (A : Set ℕ) (hA : # A = ℵ₀) := Subtype.val '' (h_next A hA).choose
 
-    have h'_next (A : Set ℕ) (hA : # A = ℵ₀) : next A hA ⊆ A := by
+    have h'_next (A : Set ℕ) (hA : # A = ℵ₀) : next A hA ⊆ A \ {b | b ≤ mind A hA}:= by
       intro a ha
+      obtain ⟨a', ha'⟩ := ha
+      rw [← ha'.2]
+      exact a'.2
 
-    have next_inf (A : Set ℕ) (hA : # A = ℵ₀) : # (next A hA) = ℵ₀ := by --(Exists.choose_spec $ ih' (min A₀ hA₀) A₀ hA₀ (c' (min A₀ hA₀) A₀)).1
+    have next_inf (A : Set ℕ) (hA : # A = ℵ₀) : # (next A hA) = ℵ₀ := by --(Exists.choose_spec $ ih' (mind A₀ hA₀) A₀ hA₀ (c' (mind A₀ hA₀) A₀)).1
       rw [← (h_next A hA).choose_spec.1]
       apply mk_image_eq Subtype.coe_injective
 
-  --   let next_inf (A₀ : Set A) (hA₀ : # A₀ = ℵ₀) : # (next A₀ hA₀) = ℵ₀ := by
-  --     rw [← next_inf' A₀ hA₀]
-  --     apply mk_image_eq
-  --     exact Subtype.coe_injective
-
-
-    let rec seq : (k : ℕ) → {A : Set ℕ // # A = ℵ₀}
+    let rec sequence : (k : ℕ) → {A : Set ℕ // # A = ℵ₀}
       | 0 => ⟨(Set.univ : Set ℕ), by
           rw [@mk_univ, mk_nat]⟩
-      | k + 1 => ⟨next (seq k) (seq k).2, next_inf (seq k) (seq k).2⟩
+      | k + 1 => ⟨next (sequence k) (sequence k).2, next_inf (sequence k) (sequence k).2⟩
 
-    have h_rec (k : ℕ) := h_next (seq k).1 (seq k).2
+    have delete_or_fix (k : ℕ) : (sequence (k + 1)).1 = next (sequence k) (sequence k).2 := by sorry --this is true by definition, I dont know what the problem is
 
-    have h'_rec (k : ℕ) : (seq (k + 1)).1 ⊆ (seq k).1 := by
-      intro a ha
+    have h_rec (k : ℕ) := h_next (sequence k).1 (sequence k).2
+
+    let a (k : ℕ) : ℕ := mind (sequence k).1 (sequence k).2
+
+    have ha (k : ℕ) : a k ∈ (sequence k).1 := by
+      exact (mind (sequence k).1 (sequence k).2).2.1
 
 
+    have h'_rec {k : ℕ} : (sequence (k + 1)).1 ⊆ (sequence k).1 \ {x | x ≤ a k} := by
+      rw [delete_or_fix]
+      exact h'_next (sequence k).1 (sequence k).2
 
-    let a (k : ℕ) : ℕ := min (seq k).1 (seq k).2
+    have sequence_monotone {a b : ℕ} (hab : a ≤ b) : (sequence b).1 ⊆ (sequence a).1 := by
+      have {k l : ℕ} : (sequence $ k + l).1 ⊆ (sequence k) := by
+        induction l
+        case zero => trivial
+        case succ m hm =>
+          intro x hx
+          apply hm (h'_rec hx).1
+
+      obtain ⟨l, hl⟩ := le_iff_exists_add.mp hab
+      rw [hl]
+      exact this
+
+    have a_mon : StrictMono a := by
+      have ha₁ (k : ℕ) {b : ℕ} (hb : b ∈ (sequence (k + 1)).1) : a k < b := by
+        specialize h'_rec hb
+        have : ¬ b ≤ a k := by
+          exact h'_rec.2
+        exact Nat.not_le.mp this
+
+      have ha₁' (k l : ℕ) (hl : 0 < l): a k < a (k + l) := by
+        induction l
+        case zero => trivial
+        case succ m hm =>
+          have : a k ≤ a (k + m) := by
+            obtain left | right := Nat.eq_zero_or_pos m
+            · rw [left]
+              exact le_of_eq rfl
+            · exact le_of_lt $ hm right
+          apply lt_of_le_of_lt this
+          exact ha₁ (k + m) (ha (k + m + 1))
+
+      intro x y hxy
+      obtain ⟨z, hz⟩ := lt_iff_exists_add.mp hxy
+      rw [hz.2]
+      apply ha₁' x z hz.1
 
     let R := range a
 
     let i (k : ℕ) : Fin 2 := (h_rec k).choose_spec.2.choose
     let hi (k : ℕ) := (h_rec k).choose_spec.2.choose_spec
 
-    let i' (Y : abcd ℕ 1) : Fin 2 := i $ (singleton_of_card_one Y.2).choose
+    have claim : ∃ colour : Fin 2, # (i ⁻¹' {colour}) = ℵ₀ := by
+      rw [← mk_nat]
+      apply Ordinal.infinite_pigeonhole
+      · exact aleph0_le_mk ℕ
+      · simp
+        exact nat_lt_aleph0 2
+    obtain ⟨colour, hcolour⟩ := claim
 
-    obtain ⟨C, hC⟩ := pigeonhole_principle ℕ (Fin 2) mk_nat (mk_fin 2) i'
-
-  --   --have {Y : Set ℕ} (hY : Y ∈  abcd (Nat.succ n) A) (k : ℕ) (h : ∀ c ∈ Y, a k ≤ c) : c $ abcd_monotone (subset_univ A) hY = 0
-    --have {Y : Set ℕ} (hY₁ : # Y = Nat.succ n) (k : ℕ) (hk : k ∈ Y) (h : ∀ l ∈ Y, a k ≤ a l) : sorry := sorry
-  --   --have {Y : abcd A n} {k : ℕ} (hY : Y.1 ⊆ R) (ha₁ : a ∈ Y.1) (ha₂ : ∀ b ∈ Y.1, a ≤ b) :
-
-    let H := a '' C
+    let H := a '' (i ⁻¹' {colour})
 
     use H
     constructor
-    · rw [← hC.1]
-      apply mk_image_eq
-
-    · obtain ⟨colour, hcolour⟩ := hC.2
-      use colour
+    · rw [← hcolour]
+      exact mk_image_eq $ StrictMono.injective a_mon
+    · use colour
       intro Y hY
-      have : # Y = Nat.succ n := by sorry
+      let k := sInf (a ⁻¹' Y.1)
+
+      have k_min {b : ℕ} (hb : b ∈ Y.1) : a k ≤ b := by
+        obtain ⟨l, hl⟩ := hY hb
+        rw [← hl.2]
+        apply a_mon.monotone
+        apply Nat.sInf_le
+        rw [←hl.2] at hb
+        exact hb
+
+
+      have that : c Y = i k := by
+        have : Y.1 \ {a k} ⊆ (sequence (k + 1)).1 := by
+          intro y hy
+          obtain ⟨l, hl⟩ := hY hy.1
+          have k_lt_l : k < l := by
+            apply lt_of_le_of_ne'
+            · by_contra hyp
+              specialize a_mon $ lt_of_not_le hyp
+              rw [hl.2] at a_mon
+              apply not_le_of_lt a_mon
+              exact k_min hy.1
+            · by_contra hyp
+              apply hy.2
+              rw [←hl.2, hyp]
+              simp
+          rw [←hl.2]
+          apply sequence_monotone k_lt_l $ ha l
+        have that : Y.1 \ {a k} ⊆ (sequence k).1 \ {b | b ≤ a k} := by
+          apply subset_trans this h'_rec
+        sorry
+
+      rw [that]
+
+      have : k ∈ a ⁻¹' Y.1 := by
+        apply Nat.sInf_mem
+
+        have Y_not_empty : Set.Nonempty Y.1 := by
+          rw [← Set.nonempty_coe_sort, ← mk_ne_zero_iff, ← Cardinal.one_le_iff_ne_zero]
+          have h : # Y.1 = n + 1 := by
+            norm_cast
+            exact Y.2
+          rw [h]
+          simp
+        obtain ⟨x, hx⟩ := hY Y_not_empty.some_mem
+        use x
+        have : a x ∈ Y.1 := by
+          rw [hx.2]
+          exact Nonempty.some_mem Y_not_empty
+        exact this
+      have : k ∈ i ⁻¹' {colour} := by
+        obtain ⟨x, hx⟩ := hY this
+        rw [← a_mon.injective hx.2]
+        exact hx.1
+      exact this
+
+
+--TODO: DELETE
+lemma test (k : ℕ) : k ≤ k + 1 := by exact Nat.le_add_right k 1
 
 
 
 
--- quantify over universes?
 
 --lemma arrows_lift {A : Type} {κ : Cardinal} {n : ℕ} {B : Type} (h : arrows_type A κ n B) : ∀ u_1, u_2, arrows_type (ULift.{u_1, 1} A) κ n (ULift.{u_2, 1} B) := sorry
 #check ite
@@ -770,10 +749,6 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
     apply arrows_card_of_arrows_type
     intro c
 
-    -- let c' (Y : abcd (ULift.{u_1, 0} ℕ) n) : ULift.{u_2, 0} (Fin 2) := {
-    --   down := if (c Y).down < m then 0 else 1
-    -- }-- if (c Y).down < m then 0 else 1 --Need to look up how I can define something by cases
-
     let f (a : (Fin (Nat.succ m))) : (Fin 2) := if a < m then 0 else 1
 
     have hf (a : (Fin (Nat.succ m))) (ha : (f a) = 1) : a = m := by
@@ -781,10 +756,7 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
       apply le_antisymm
       · exact Fin.le_val_last a
       · exact Fin.not_lt.mp ha
-    -- have hc'₀ (Y : abcd (ULift.{u_1, 0} ℕ) n) (hY : (c Y).down < m) : (c' Y).down = 0 := by sorry
-    -- have hc'₁ (Y : abcd (ULift.{u_1, 0} ℕ) n) (hY : (c Y).down = m) : (c' Y).down = 1 := by sorry
 
-    --have : # (ULift.{u_1, 0} ℕ) = ℵ₀ := by exact?
 
 
     obtain ⟨H, hH⟩ := ramsey_two n ℕ (Fin 2) mk_nat (mk_fin 2) (f ∘ c)
@@ -793,12 +765,52 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
 
     by_cases i = 0
     ·
-      have {Y : abcd ℕ n} (hY : Y.1 ⊆ H) : c Y < m := sorry
+      have {Y : abcd ℕ n} (hY : Y.1 ⊆ H) : c Y < m := by
+        specialize hi Y hY
+        rw [h] at hi
+        simp at hi
+        exact Fin.not_le.mp hi
+
+      have (Y : abcd H n) : (c ⟨Subtype.val '' Y.1, abcd_monotone Y⟩ : ℕ) < m := by
+        have {Y : abcd ℕ n} (hY : Y.1 ⊆ H) : (c Y : ℕ) < m := by
+          by_contra neg
+          simp at neg
+          specialize hi Y hY
+          rw [h] at hi
+          simp at hi
+          have hi := Fin.not_le.mp hi
+          simp_rw [le_antisymm neg $ Fin.is_le (c Y)] at hi
+          sorry --annoying that I cannot solve this rn
 
 
+        apply this
+        simp
 
-      let c'' (Y : abcd H n) : (ULift.{u_2, 0} (Fin m)) := ⟨((c Y) : ℕ), sorry⟩
-      sorry -- let c'' (Y : abcd H n) : (ULift.{u_2, 0} (Fin m)) := --⟨((c ⟨Y.1, sorry⟩) : ULift.{u_2, 0} ℕ), sorry⟩
+      let c' (Y : abcd H n) : Fin m := Fin.castLT (c ⟨Subtype.val '' Y.1, abcd_monotone Y⟩) (this Y)
+
+      rw [← mk_nat] at hH
+
+      obtain ⟨H', hH'⟩ := hm H (Fin m) hH.1 rfl c'
+
+      use Subtype.val '' H'
+      constructor
+      · rw [← hH'.1]
+        exact mk_image_eq Subtype.coe_injective
+      · obtain ⟨i', hi'⟩ := hH'.2
+        use Fin.castLE (Nat.le_add_right m 1) i'
+        intro Y hY
+        ext
+        simp
+        specialize hi' ⟨Subtype.val ⁻¹' Y, sorry⟩ sorry
+        rw [← hi']
+        simp
+        have Y_sub_H : Y.1 ∩ H = Y.1 := by
+          rw [Set.inter_eq_left]
+          intro y hy
+          obtain ⟨x, hx⟩ := hY hy
+          rw [← hx.2]
+          exact Subtype.mem x
+        simp_rw [Y_sub_H]
     · have ieo : i = 1 := fin2_one_of_ne_two i h
       use H
       constructor
@@ -958,7 +970,6 @@ theorem erdos_rado {n : ℕ} {κ : Cardinal} (hκ : ℵ₀ ≤ κ) : -- this com
           obtain ⟨b, hb⟩ := h
           exact ((mem_diff b.1).mp b.2).2 hb.2
         norm_cast at this⟩
-    --let c' (a : A) (Y : abcd A (n + 1)) : B := sorry
 
     have thingy {a : A} {B : Set A} {Y : abcd A (n + 1)} (ha : a ∉ B) (hY : Y.1 ⊆ B) : Subtype.val ⁻¹' Y.1 ∈ abcd ((Set.univ : Set A) \ {a} : Set A) (n + 1) := by
       have : # Y.1 = n + 1 := by exact Y.2
