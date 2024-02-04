@@ -391,7 +391,9 @@ lemma arrows_card_lift_left.{u1, u2} {lambda κ : Cardinal.{u1}} {n : ℕ} {μ :
   rw [← lift_id μ]
   exact arrows_card_lift h
 
-lemma fin2_one_of_ne_two (x : Fin 2) (h : x ≠ 0) : x = 1 := by
+
+-- TODO: change all occurences
+lemma fin2_one_of_ne_zero {x : Fin 2} (h : x ≠ 0) : x = 1 := by
   apply Fin.fin_two_eq_of_eq_zero_iff
   simp [h]
 
@@ -495,13 +497,6 @@ lemma pigeonhole_principle_abcd : arrows_card ℵ₀ ℵ₀ 1 2 := by
 
   exact LT.lt.ne this hA
 
-
-#check sInf
-#check Nat.sInf_mem
-#check monotone_nat_of_le_succ
---lemma test (A : Set ℕ) (B : Set ℕ) (hA : # A = ℵ₀) (hB : # B < ℵ₀) : # A \ B = ℵ₀ := sorry
-
-
 -- WIP
 lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ₀ : Cardinal.{u1}) n (2 : Cardinal.{u2}):= by
   rw [← lift_aleph0.{0, u1}]
@@ -586,7 +581,7 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
       rw [← ha'.2]
       exact a'.2
 
-    have next_inf (A : Set ℕ) (hA : # A = ℵ₀) : # (next A hA) = ℵ₀ := by --(Exists.choose_spec $ ih' (mind A₀ hA₀) A₀ hA₀ (c' (mind A₀ hA₀) A₀)).1
+    have next_inf (A : Set ℕ) (hA : # A = ℵ₀) : # (next A hA) = ℵ₀ := by
       rw [← (h_next A hA).choose_spec.1]
       apply mk_image_eq Subtype.coe_injective
 
@@ -696,7 +691,67 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
           apply sequence_monotone k_lt_l $ ha l
         have that : Y.1 \ {a k} ⊆ (sequence k).1 \ {b | b ≤ a k} := by
           apply subset_trans this h'_rec
-        sorry
+        --have the_other_one := (h_rec k).choose_spec.2 Y
+        let Y' : (abcd ↑((sequence k).1 \ {b | b ≤ ↑(mind (sequence k).1 (sequence k).2)}) ↑n) := {
+          val := {y | y.1 ∈ Y.1 ∧ y.1 ≠ a k}
+          property := by
+            --let f (y : {y | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
+            sorry
+        }
+        have hY' : Y'.1 ⊆ (h_next (sequence k).1 (sequence k).2).choose := by
+          intro y hy
+          have dumsda : y.1 ∈ Y.1 \ {a k} := by
+            exact hy
+          specialize this dumsda
+          rw [delete_or_fix] at this
+          obtain ⟨x, hx⟩ := this
+          have x_eq_y : x = y := by
+            ext
+            exact hx.2
+          rw [←x_eq_y]
+          exact hx.1
+        specialize hi k Y' hY'
+        have dingsda : c' (a k) (sequence k).1 Y' = c Y := by
+          simp
+          congr
+          ext x
+          constructor
+          · intro hx
+            by_cases x = a k
+            · rw [h]
+              have claim : k ∈ a ⁻¹' Y.1 := by
+                apply Nat.sInf_mem
+                apply Set.Nonempty.preimage'
+                · have : Nonempty Y.1 := by
+                    rw [← mk_ne_zero_iff, Y.2]
+                    exact NeZero.natCast_ne (Nat.succ n) Cardinal.{0}
+                  apply nonempty_of_nonempty_subtype
+                · apply subset_trans hY
+                  simp
+              exact claim
+            · have claim := mem_of_mem_insert_of_ne hx h
+              simp at claim
+              obtain ⟨x',hx'⟩ := claim
+              rw [← hx'.2.2]
+              exact hx'.1.1
+          · intro ha
+            by_cases x = a k
+            · rw [h]
+              simp
+            · apply mem_insert_of_mem
+              specialize that ⟨ha, h⟩
+
+              use ⟨x, that⟩
+              constructor
+              · constructor
+                · exact ha
+                · simp
+                  simp at h
+                  exact h
+              · simp
+        rw [← dingsda]
+        simp
+        exact hi
 
       rw [that]
 
@@ -723,16 +778,6 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
       exact this
 
 
---TODO: DELETE
-lemma test (k : ℕ) : k ≤ k + 1 := by exact Nat.le_add_right k 1
-
-
-
-
-
---lemma arrows_lift {A : Type} {κ : Cardinal} {n : ℕ} {B : Type} (h : arrows_type A κ n B) : ∀ u_1, u_2, arrows_type (ULift.{u_1, 1} A) κ n (ULift.{u_2, 1} B) := sorry
-#check ite
-
 lemma this_is_a_lemma (m : ℕ) (a : Fin (m + 1)) : a ≠ m → a < m := by
   intro h
   refine LE.le.lt_of_ne' ?_ (id (Ne.symm h))
@@ -750,14 +795,6 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
     intro c
 
     let f (a : (Fin (Nat.succ m))) : (Fin 2) := if a < m then 0 else 1
-
-    have hf (a : (Fin (Nat.succ m))) (ha : (f a) = 1) : a = m := by
-      simp at ha
-      apply le_antisymm
-      · exact Fin.le_val_last a
-      · exact Fin.not_lt.mp ha
-
-
 
     obtain ⟨H, hH⟩ := ramsey_two n ℕ (Fin 2) mk_nat (mk_fin 2) (f ∘ c)
 
@@ -779,8 +816,8 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
           rw [h] at hi
           simp at hi
           have hi := Fin.not_le.mp hi
-          simp_rw [le_antisymm neg $ Fin.is_le (c Y)] at hi
-          sorry --annoying that I cannot solve this rn
+          simp_rw [le_antisymm neg $ Fin.is_le (c Y), Fin.cast_val_eq_self (c Y)] at hi
+          simp at hi
 
 
         apply this
@@ -801,7 +838,24 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
         intro Y hY
         ext
         simp
-        specialize hi' ⟨Subtype.val ⁻¹' Y, sorry⟩ sorry
+
+        have : Subtype.val ⁻¹' Y.1 ∈ abcd H n := by
+          have : n = # Y.1 := by exact Y.2.symm
+          simp_rw [this]
+          apply mk_preimage_of_injective_of_subset_range
+          · exact Subtype.coe_injective
+          · intro y hy
+            obtain ⟨x, hx⟩ := hY hy
+            use x
+            exact hx.2
+
+        have that : Subtype.val ⁻¹' Y.1 ⊆ H' := by
+          intro x hx
+          specialize hY hx
+          simp at hY
+          exact hY
+
+        specialize hi' ⟨Subtype.val ⁻¹' Y.1, this⟩ that
         rw [← hi']
         simp
         have Y_sub_H : Y.1 ∩ H = Y.1 := by
@@ -811,7 +865,7 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
           rw [← hx.2]
           exact Subtype.mem x
         simp_rw [Y_sub_H]
-    · have ieo : i = 1 := fin2_one_of_ne_two i h
+    · have ieo : i = 1 := fin2_one_of_ne_zero h
       use H
       constructor
       · rw [mk_nat]
@@ -829,11 +883,7 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
 
 
 
-
-lemma split_pair {A : Type*} {Y : Set A} (hY : # Y = 2) : ∃ x : A, ∃ y : A, x ≠ y ∧ Y = {x, y} := by sorry
-
-
-
+-- Everything below this line is the product of hubris
 
 example : ¬arrows_card (2^ℵ₀) 3 2 ℵ₀ := by
 
@@ -846,18 +896,123 @@ example : ¬arrows_card (2^ℵ₀) 3 2 ℵ₀ := by
 
   intro h
 
-  --probably want some lemma / function separating a set of cardinality 2 into its two components
+  -- the usual way to proof this is to consider the coloring
+  --    that colours a pair of (distinct) sequences with the least number such that the two disagree
+  -- any homogenous set has size at most 2,
+  --    since three different binary sequences cant disagree pairwise
 
-  let c (Y : abcd (ℕ → Fin 2) 2) : ℕ := sorry
+  let c (Y : abcd (ℕ → Fin 2) 2) : ℕ := sInf {k : ℕ | ∀ a ∈ Y.1, ∀ b ∈ Y.1, a ≠ b → a k ≠ b k}
+
+  have hc (Y : abcd (ℕ → Fin 2) 2) : c Y ∈ {k : ℕ | ∀ a ∈ Y.1, ∀ b ∈ Y.1, a ≠ b → a k ≠ b k} := by
+    apply Nat.sInf_mem
+    --by_contra neg
+
+    --have := Set.not_nonempty_iff_eq_empty.mp neg
+
+    obtain ⟨a, b, hab⟩ := Cardinal.mk_eq_two_iff.mp Y.2
+
+    have a_neq_b : a.1 ≠ b.1 := by
+      intro neg
+      apply hab.1
+      ext1
+      exact neg
+
+
+    have hY : Y.1 = {a.1,b.1} := by
+      ext x
+      constructor
+      · intro hx
+        simp
+        have : ⟨x, hx⟩ ∈ ({a,b} : Set Y) := by
+          rw [hab.2]
+          trivial
+        --simp at this
+        obtain x_eq_a | x_eq_b := this
+        · left
+          rw [← x_eq_a]
+        · right
+          rw [← x_eq_b]
+      · intro hx
+        obtain x_eq_a | x_eq_b := hx
+        · rw [x_eq_a]
+          exact a.2
+        · rw [x_eq_b]
+          exact b.2
+
+    --apply hab.1
+    --ext k
+    obtain ⟨k, hk⟩ := Function.ne_iff.mp a_neq_b
+    use k
+    intro x hx y hy hxy
+    rw [hY] at hx hy
+    obtain x_eq_a | x_eq_b := hx
+    · subst x
+      obtain y_eq_a | y_eq_b := hy
+      · subst y
+        simp at hxy
+      · subst y
+        exact hk
+    · subst x
+      obtain y_eq_a | y_eq_b := hy
+      · subst y
+        exact hk.symm
+      · subst y
+        simp at hxy
+
+
 
   obtain ⟨H, hH⟩ := h c
 
+  obtain ⟨i, hi⟩ := hH.2
+
+  let f (a : H) : Fin 2 := a.1 i
+
+  have f_inj : f.Injective := by
+    intro a b
+
+    by_contra h
+    push_neg at h
+
+    have a_neq_b : a.1 ≠ b.1 := by
+      intro neg
+      apply h.2
+      ext1
+      exact neg
+
+    let Y : Set (ℕ → Fin 2) := {a.1, b.1}
+
+    have hY₁ : # Y = 2 := by
+      simp_rw [←one_add_one_eq_two]
+      have : a.1 ∉ ({b.1} : Set (ℕ → Fin 2)) := a_neq_b
+      rw [mk_insert this]
+      simp
+
+    have hY₂ : c ⟨Y, hY₁⟩ = i := by
+      have : Y ⊆ H := by
+        intro x hx
+        simp at hx
+        obtain x_eq_a | x_eq_b := hx
+        · rw [x_eq_a]
+          exact a.2
+        · rw [x_eq_b]
+          exact b.2
+
+      exact hi ⟨Y, hY₁⟩ this
+
+    specialize hc ⟨Y, hY₁⟩ a.1 (mem_insert a.1 {b.1}) b.1 (mem_insert_of_mem (a.1) rfl) a_neq_b
+    rw [hY₂] at hc
+    simp at h
+    exact hc h.1
 
 
-  sorry
+  have : # (Fin 2) = 3 := by
+    apply le_antisymm
+    · simp
+      norm_num
+    · rw [← hH.1, le_def]
+      use f
 
-
-#check Set.Nonempty
+  simp at this
 
 noncomputable section --huh, this is needed for the definition of ℶ
 
@@ -865,6 +1020,7 @@ open Ordinal
 
 
 --Remark: The definition of beth numbers in mathlib is not entirely congruent with the one in the script I use
+--  for our purposes α : ℕ actually suffices
 def ℶ.{u} (κ : Cardinal.{u}) (α : Ordinal.{u}) : Cardinal :=
   limitRecOn α κ (fun _ x => (2 : Cardinal) ^ x) fun a _ IH => ⨆ b : Iio a, IH b.1 b.2
 
@@ -882,7 +1038,8 @@ example {α : Ordinal} : beth α = ℶ ℵ₀ α := rfl
 
 -- I cant write the name of the theorem properly, because "Erdős" is not allowed as a string
 
-theorem erdos_rado {n : ℕ} {κ : Cardinal} (hκ : ℵ₀ ≤ κ) : -- this complains about universes unless ℶ takes input only from the same universe
+-- also, this is more about being able to state it than proving it, since I value my sanity somewhat
+theorem erdos_rado {n : ℕ} {κ : Cardinal} (hκ : ℵ₀ ≤ κ) :
     arrows_card (succ (ℶ κ n)) (succ κ) (n + 1) κ  := by
   induction n
   case zero =>
@@ -982,7 +1139,7 @@ theorem erdos_rado {n : ℕ} {κ : Cardinal} (hκ : ℵ₀ ≤ κ) : -- this com
         subst hx'
         exact ha $ hY hx
 
-    have claim : ∃ A' : Set A, # A = ℶ κ (n + 1) ∧ ∀ B : Set A, # B = ℶ κ n → ∀ b ∈ Bᶜ, ∃ a ∈ (A' \ B),
+    have claim : ∃ A' : Set A, # A' = ℶ κ (n + 1) ∧ ∀ B : Set A, # B = ℶ κ n → ∀ b ∈ Bᶜ, ∃ a ∈ (A' \ B),
          ∀ Y : abcd A (n + 1), Y.1 ⊆ B → c' a ⟨Subtype.val ⁻¹' Y.1, sorry⟩ = c' b ⟨Subtype.val ⁻¹' Y, sorry⟩ := sorry
 
     obtain ⟨X, hX⟩ := claim
