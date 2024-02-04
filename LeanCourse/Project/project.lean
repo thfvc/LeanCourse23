@@ -498,6 +498,13 @@ lemma pigeonhole_principle_abcd : arrows_card ℵ₀ ℵ₀ 1 2 := by
   exact LT.lt.ne this hA
 
 -- WIP
+
+lemma cardinal_succ_eq_add_one_of_finite {A : Type*} (hA : # A < ℵ₀) : Order.succ # A = # A + 1 := by
+  rw [lt_aleph0] at hA
+  obtain ⟨n, hn⟩ := hA
+  rw [hn]
+  norm_cast
+
 lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ₀ : Cardinal.{u1}) n (2 : Cardinal.{u2}):= by
   rw [← lift_aleph0.{0, u1}]
   rw [← lift_two.{u2, 0}]
@@ -692,11 +699,71 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
         have that : Y.1 \ {a k} ⊆ (sequence k).1 \ {b | b ≤ a k} := by
           apply subset_trans this h'_rec
         --have the_other_one := (h_rec k).choose_spec.2 Y
-        let Y' : (abcd ↑((sequence k).1 \ {b | b ≤ ↑(mind (sequence k).1 (sequence k).2)}) ↑n) := {
+
+
+
+        let Y' : (abcd ↑((sequence k).1 \ {b | b ≤ (mind (sequence k).1 (sequence k).2).1}) ↑n) := {
           val := {y | y.1 ∈ Y.1 ∧ y.1 ≠ a k}
           property := by
             --let f (y : {y | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
-            sorry
+            have : n = # ((Y.1 \ {a k}) : Set ℕ) := by
+              apply Order.succ_injective
+              norm_cast
+              let yyyyyy := Y.2.symm -- need this so simp_rw is not too strong
+              simp_rw [yyyyyy]
+              have a_k_sub_Y : {a k} ⊆ Y.1 := by
+                have : k ∈ a ⁻¹' Y.1 := by
+                  apply Nat.sInf_mem
+                  have Y_nonempty : Set.Nonempty Y.1 := by
+                    rw [Set.nonempty_iff_ne_empty, ← Set.nonempty_iff_ne_empty', ← mk_ne_zero_iff]
+                    simp_rw [← yyyyyy]
+                    norm_num
+                    exact Cardinal.succ_ne_zero ↑n
+                  obtain ⟨y, hy⟩ := Y_nonempty
+                  obtain ⟨x, hx⟩ := hY hy
+                  use x
+                  simp
+                  simp at hx
+                  rw [hx.2]
+                  exact hy
+                simp at this
+                simp [this]
+              rw [← mk_diff_add_mk a_k_sub_Y]
+              simp
+              have finite : # ((Y.1 \ {a k}) : Set ℕ) < ℵ₀ := by
+                apply lt_of_le_of_lt
+                · have sub_Y : (Y.1 \ {a k}) ⊆ Y.1 := by simp
+                  exact mk_le_mk_of_subset sub_Y
+                · simp_rw [← yyyyyy]
+                  exact nat_lt_aleph0 (Nat.succ n)
+              rw [cardinal_succ_eq_add_one_of_finite finite]
+            rw [this]
+
+            have this : # {y : ↑((sequence k).1 \ {b | b ≤ (mind (sequence k).1 (sequence k).2).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k} = #(Y.1 \ {a k} : Set ℕ) := by
+              rw [Cardinal.eq]
+
+              have hg (x : {y : ↑((sequence k).1 \ {b | b ≤ (mind (sequence k).1 (sequence k).2).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
+                      : x.1.1 ∈ (Y.1 \ {a k}) := x.2
+
+              let g (x : {y : ↑((sequence k).1 \ {b | b ≤ (mind (sequence k).1 (sequence k).2).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
+                      : ↑(Y.1 \ {a k}) := ⟨x.1.1, x.2⟩
+              have g_bij : g.Bijective := by
+                constructor
+                · intro x y hxy
+                  ext
+                  simp at hxy
+                  exact hxy
+
+                · intro y
+                  specialize that y.2
+                  use ⟨⟨y.1, that⟩, y.2⟩
+
+              -- TODO: this seems weirdly unhandy, this should be easier!
+              use Equiv.ofBijective g g_bij
+              use (Equiv.ofBijective g g_bij).symm
+              exact Equiv.left_inv' (Equiv.ofBijective g g_bij)
+              exact Equiv.right_inv' (Equiv.ofBijective g g_bij)
+            exact this
         }
         have hY' : Y'.1 ⊆ (h_next (sequence k).1 (sequence k).2).choose := by
           intro y hy
@@ -882,9 +949,6 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
         exact this_is_a_lemma m (c Y) that
 
 
-
--- Everything below this line is the product of hubris
-
 example : ¬arrows_card (2^ℵ₀) 3 2 ℵ₀ := by
 
   have h₁ : 2 ^ ℵ₀ = # (ℕ → Fin 2) := by simp
@@ -1014,6 +1078,10 @@ example : ¬arrows_card (2^ℵ₀) 3 2 ℵ₀ := by
 
   simp at this
 
+-- Everything below this line is the product of hubris
+
+
+
 noncomputable section --huh, this is needed for the definition of ℶ
 
 open Ordinal
@@ -1021,6 +1089,8 @@ open Ordinal
 
 --Remark: The definition of beth numbers in mathlib is not entirely congruent with the one in the script I use
 --  for our purposes α : ℕ actually suffices
+-- different sources use different notation for the more general version of this function (for κ arbitrary)
+-- while my direct source uses ℶ, wikipedia for example calls the general version of this function exp
 def ℶ.{u} (κ : Cardinal.{u}) (α : Ordinal.{u}) : Cardinal :=
   limitRecOn α κ (fun _ x => (2 : Cardinal) ^ x) fun a _ IH => ⨆ b : Iio a, IH b.1 b.2
 
