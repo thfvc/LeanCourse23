@@ -9,25 +9,35 @@ open Ordinal
 open Cardinal
 open Set
 
-def abcd (X : Type*) (ν : Cardinal) : Set (Set X) := {Y | # Y = ν}
 
-lemma abcd_monotone {A' : Type*} {n : ℕ} {A : Set A'} (Y : abcd A n) : Subtype.val '' Y.1 ∈ abcd A' n := by
+-- the entirety of this formalization is based on the notes by Stefan Geschke, they can be found at
+-- https://www.math.uni-hamburg.de/home/geschke/teaching/InfiniteRamseyNotes.pdf
+
+-- this file takes about 40 seconds to check on my (somewhat good) laptop
+-- the major problem here is ramsey_two, which needs to check a lot of cardinalities
+
+
+
+-- this notion for ν = 2 corresponds to undirected edges
+def edges (X : Type*) (ν : Cardinal) : Set (Set X) := {Y | # Y = ν}
+
+lemma edges_monotone {A' : Type*} {n : ℕ} {A : Set A'} (Y : edges A n) : Subtype.val '' Y.1 ∈ edges A' n := by
   have : # (Subtype.val '' Y.1) = # Y := mk_image_eq Subtype.coe_injective
   rw [Y.2] at this
   exact this
 
-lemma abcd_inj {A A' : Type*} {n : ℕ} {f : A → A'} (hf: f.Injective) {Y : abcd A n} : f '' Y.1 ∈ abcd A' n := by
+lemma edges_inj {A A' : Type*} {n : ℕ} {f : A → A'} (hf: f.Injective) {Y : edges A n} : f '' Y.1 ∈ edges A' n := by
   have : lift.{u_1, u_2} # (f '' Y.1) = lift.{u_2, u_1} # Y := mk_image_eq_lift f Y.1 hf
   rw [Y.2] at this
   simp at this
   exact this
 
-def coloring (X : Type*) (n : ℕ) (μ : Type*) := (abcd X n) → μ
+def coloring (X : Type*) (n : ℕ) (μ : Type*) := (edges X n) → μ
 
 example {X : Type*} (A A' : Set X) : A ∩ A' ⊆ A := by exact Set.inter_subset_left A A'
 
 def homogeneous_of_color {X μ : Type*} {n : ℕ} (c : coloring X n μ) (H : Set X) (i : μ)  : Prop :=
-  ∀ Y : abcd X n, Y.1 ⊆ H →  c Y  = i
+  ∀ Y : edges X n, Y.1 ⊆ H →  c Y  = i
 
 def homogeneous {A B : Type*} {n : ℕ} (c : coloring A n B) (H : Set A) : Prop :=
   ∃ i : B, homogeneous_of_color c H i
@@ -37,7 +47,6 @@ def arrows_type (A : Type*) (κ : Cardinal) (n : ℕ) (B : Type*) : Prop :=
 
 
 -- A note on notation: The source I adapted used λ as a cardinal. Due to lambda terms I was unable to do so. Instead we use lambda.
--- TODO: think of way to fix this
 def arrows_card (lambda κ : Cardinal) (n : ℕ) (μ : Cardinal) : Prop :=
   ∀ (A B : Type*), # A = lambda → # B = μ → arrows_type A κ n B
 
@@ -45,8 +54,8 @@ lemma arrows_type_bij.{u} {A A' : Type u} {κ : Cardinal} {n : ℕ} {B B' : Type
     arrows_type A κ n B → arrows_type A' κ n B' := by
   intro h c
 
-  let f' (Y : abcd A n) : abcd A' n := ⟨f.toFun '' Y, by
-    apply abcd_inj
+  let f' (Y : edges A n) : edges A' n := ⟨f.toFun '' Y, by
+    apply edges_inj
     exact f.left_inv.injective
     ⟩
 
@@ -62,8 +71,8 @@ lemma arrows_type_bij.{u} {A A' : Type u} {κ : Cardinal} {n : ℕ} {B B' : Type
     use g.toFun i
     intro Y' hY'
 
-    let Y : abcd A n := ⟨f.invFun '' Y', by
-      apply abcd_inj
+    let Y : edges A n := ⟨f.invFun '' Y', by
+      apply edges_inj
       exact Function.LeftInverse.injective f.right_inv⟩
     have hY₁ : Y.1 ⊆ H := by
       intro y hy
@@ -129,7 +138,7 @@ lemma monotone_left (lambda lambda' κ : Cardinal) (n : ℕ) (μ : Cardinal) (hl
 
   obtain ⟨A, hA⟩ := hlambda
 
-  let c (Y : abcd A n) : B := c' ⟨Subtype.val '' Y.1, abcd_monotone Y⟩
+  let c (Y : edges A n) : B := c' ⟨Subtype.val '' Y.1, edges_monotone Y⟩
 
   obtain ⟨H, hH⟩ := h A B hA hB c
 
@@ -144,7 +153,7 @@ lemma monotone_left (lambda lambda' κ : Cardinal) (n : ℕ) (μ : Cardinal) (hl
     use i
     intro Y' hY'
     let Y : Set A := Subtype.val ⁻¹' Y'
-    have hY₁ : Y ∈ abcd A n := by
+    have hY₁ : Y ∈ edges A n := by
       rw [← Y'.2]
       apply mk_preimage_of_injective_of_subset_range
       · exact Subtype.coe_injective
@@ -174,8 +183,8 @@ lemma monotone_left (lambda lambda' κ : Cardinal) (n : ℕ) (μ : Cardinal) (hl
         obtain ⟨y, hy⟩ := hy'
         rw [← hy.2]
         exact hy.1
-    have hY'₂ : Subtype.val '' Y ∈ abcd A' n := abcd_monotone ⟨Y, hY₁⟩
-    let Y'' : abcd A' n := ⟨Subtype.val '' Y, hY'₂⟩
+    have hY'₂ : Subtype.val '' Y ∈ edges A' n := edges_monotone ⟨Y, hY₁⟩
+    let Y'' : edges A' n := ⟨Subtype.val '' Y, hY'₂⟩
 
     have : Y' = Y'' := by
       ext1
@@ -262,7 +271,7 @@ lemma arrows_of_right_empty {lambda κ : Cardinal} {n : ℕ} (nleqlambda : n ≤
     arrows_card lambda κ n 0 := by
   intro A B hA hB c
 
-  have this : Nonempty (abcd A n) := by
+  have this : Nonempty (edges A n) := by
     rw [← hA] at nleqlambda
     obtain ⟨Y, hY⟩ := le_mk_iff_exists_set.mp nleqlambda
     simp
@@ -272,7 +281,7 @@ lemma arrows_of_right_empty {lambda κ : Cardinal} {n : ℕ} (nleqlambda : n ≤
   rw [← not_isEmpty_iff] at this
   rw [mk_eq_zero_iff] at hB
 
-  have that : IsEmpty (abcd A n) := by exact c.isEmpty
+  have that : IsEmpty (edges A n) := by exact c.isEmpty
 
   contradiction
 
@@ -340,7 +349,7 @@ lemma arrows_card_lift.{u1, u2, u3, u4} {lambda κ : Cardinal.{u1}} {n : ℕ} {�
 
   have f_inj : f.Injective := by exact ULift.up_injective
 
-  let c (Y : abcd A n) : B := (c' ⟨f '' Y, abcd_inj f_inj⟩).down
+  let c (Y : edges A n) : B := (c' ⟨f '' Y, edges_inj f_inj⟩).down
 
   obtain ⟨H, hH⟩ := h A B cardA cardB c
 
@@ -393,10 +402,9 @@ lemma arrows_card_lift_left.{u1, u2} {lambda κ : Cardinal.{u1}} {n : ℕ} {μ :
   rw [← lift_id μ]
   exact arrows_card_lift h
 
-lemma neq_of_not_member_singleton {A : Type*} {a b : A} (h : a ∉ ({b} : Set A)) : b ≠ a := by
-  exact Ne.symm h
+-- lemma neq_of_not_member_singleton {A : Type*} {a b : A} (h : a ∉ ({b} : Set A)) : b ≠ a := by
+--   exact Ne.symm h
 
--- TODO: change all occurences
 lemma fin2_one_of_ne_zero {x : Fin 2} (h : x ≠ 0) : x = 1 := by
   apply Fin.fin_two_eq_of_eq_zero_iff
   simp [h]
@@ -425,7 +433,7 @@ lemma rathole_principle : arrows_card ℵ₀ ℵ₀ 0 2 := by
   simp
   constructor
   · exact hA
-  · have : ∅ ∈ abcd A 0 := by exact mk_emptyCollection A
+  · have : ∅ ∈ edges A 0 := by exact mk_emptyCollection A
     let i := c ⟨∅, this⟩
     use i
     intro Y _
@@ -436,8 +444,8 @@ lemma rathole_principle : arrows_card ℵ₀ ℵ₀ 0 2 := by
       exact Y.2
     rw [this]
 
-lemma singleton_abcd {A : Type*} (x : A) : {x} ∈ abcd A 1  := by
-    rw [abcd]
+lemma singleton_edges {A : Type*} (x : A) : {x} ∈ edges A 1  := by
+    rw [edges]
     simp
 
 lemma mono_backwards {A B : Type*} [LinearOrder A] [LinearOrder B] {f : A → B} (ha : Monotone f) {k l : A} (hkl : f k < f l) : k < l := by
@@ -448,14 +456,14 @@ lemma mono_backwards {A B : Type*} [LinearOrder A] [LinearOrder B] {f : A → B}
 -- this is how the usual pigeonhole principle (in its most basic form) looks in this context.
 -- Note: Since LEAN doesnt identify singleton sets and their contents, this lemma is (usually) less usable
 -- than the versions from Mathlib
-lemma pigeonhole_principle_abcd : arrows_card ℵ₀ ℵ₀ 1 2 := by
+lemma pigeonhole_principle_edges : arrows_card ℵ₀ ℵ₀ 1 2 := by
   intro A B hA hB
 
   intro c
   by_contra hyp
   push_neg at hyp
 
-  let H (i : B) := {x : A | c ⟨{x}, singleton_abcd x⟩ = i}
+  let H (i : B) := {x : A | c ⟨{x}, singleton_edges x⟩ = i}
 
   have Hhom (i : B): homogeneous c $ H i := by
     use i
@@ -466,7 +474,7 @@ lemma pigeonhole_principle_abcd : arrows_card ℵ₀ ℵ₀ 1 2 := by
       exact hY
 
     calc c Y
-      _ = c ⟨{n}, singleton_abcd n⟩ := by rw [← Subtype.coe_eq_of_eq_mk hn]
+      _ = c ⟨{n}, singleton_edges n⟩ := by rw [← Subtype.coe_eq_of_eq_mk hn]
       _ = i := this
 
   obtain ⟨x, y, hxy⟩ := mk_eq_two_iff.mp hB
@@ -476,7 +484,7 @@ lemma pigeonhole_principle_abcd : arrows_card ℵ₀ ℵ₀ 1 2 := by
     constructor
     · intro _
       simp
-      have : c ⟨{a}, singleton_abcd a⟩ ∈ ({x, y} : Set B) := by
+      have : c ⟨{a}, singleton_edges a⟩ ∈ ({x, y} : Set B) := by
         rw [hxy.2]
         trivial
       exact this
@@ -505,10 +513,20 @@ lemma pigeonhole_principle_abcd : arrows_card ℵ₀ ℵ₀ 1 2 := by
 
   exact LT.lt.ne this hA
 
+lemma card_eq_of_bijection.{u} {A B : Type u} {f : A → B} (hf : Function.Bijective f) : # A = # B := by
+  rw [Cardinal.eq]
+
+  -- TODO: this seems weirdly unhandy, this should be easier!
+
+  use Equiv.ofBijective f hf
+  use (Equiv.ofBijective f hf).symm
+  exact Equiv.left_inv' (Equiv.ofBijective f hf)
+  exact Equiv.right_inv' (Equiv.ofBijective f hf)
+
+
+
+-- a version of mk_ne_zero_iff for Sets
 lemma set_nonempty_iff {A : Type*} {Y : Set A} : Y.Nonempty ↔ # Y ≠ 0 := by
--- have : Nonempty Y.1 := by
---                     rw [← mk_ne_zero_iff, Y.2]
---                     exact NeZero.natCast_ne (Nat.succ n) Cardinal.{0}
   constructor
   · intro h
     rw [mk_ne_zero_iff]
@@ -525,20 +543,19 @@ lemma cardinal_succ_eq_add_one_of_finite {A : Type*} (hA : # A < ℵ₀) : Order
   rw [hn]
   norm_cast
 
-lemma nonempty_of_succ_n {A : Type*} {n : ℕ} {Y : abcd A (Nat.succ n)} : Y.1.Nonempty := by
+lemma nonempty_of_succ_n {A : Type*} {n : ℕ} {Y : edges A (Nat.succ n)} : Y.1.Nonempty := by
   rw [set_nonempty_iff]
   let yyyy := Y.2
   rw [yyyy]
   exact NeZero.natCast_ne (Nat.succ n) Cardinal.{u_1}
 
-def seq' (next : {A : Set ℕ // # A = ℵ₀} → {A : Set ℕ // # A = ℵ₀}) :
+
+-- this is only used for recursively defining something in the proof of ramseys theorem for 2 colors
+private def seq' (next : {A : Set ℕ // # A = ℵ₀} → {A : Set ℕ // # A = ℵ₀}) :
                         ℕ → {A : Set ℕ // # A = ℵ₀}
       | 0 => ⟨(Set.univ : Set ℕ), by
           rw [@mk_univ, mk_nat]⟩
       | k + 1 => next $ seq' next k
-
-example (next : {A : Set ℕ // # A = ℵ₀} → {A : Set ℕ // # A = ℵ₀}) (k : ℕ) : seq' next (k + 1) = next (seq' next k) := by
-  rfl
 
 
 lemma card_minus_one {A : Type*} {n : ℕ} {Y : Set A} {a : A} (hA : # Y = (n + 1 : ℕ)) (ha : a ∈ Y) : # ↑(Y \ {a}) = n := by
@@ -558,7 +575,7 @@ lemma card_minus_one {A : Type*} {n : ℕ} {Y : Set A} {a : A} (hA : # Y = (n + 
       exact nat_lt_aleph0 (Nat.succ n)
   rw [cardinal_succ_eq_add_one_of_finite finite]
 
-set_option maxHeartbeats 415000 -- thats about as far down, as I can bring this
+set_option maxHeartbeats 415000 -- thats about as far down as I can bring this
 
 theorem ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ₀ : Cardinal.{u1}) n (2 : Cardinal.{u2}):= by
   rw [← lift_aleph0.{0, u1}]
@@ -600,7 +617,7 @@ theorem ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (�
           exact infinite_coe_iff.mp $ infinite_iff.mpr $ Eq.le (id B.2.symm)
       · exact mk_fin 2
 
-    let f (a : ℕ) (A : Set ℕ) (Y : abcd (A \ {b | b ≤ a} : Set ℕ) n) : abcd ℕ (Nat.succ n) := ⟨insert a (Subtype.val '' Y.1), by
+    let f (a : ℕ) (A : Set ℕ) (Y : edges (A \ {b | b ≤ a} : Set ℕ) n) : edges ℕ (Nat.succ n) := ⟨insert a (Subtype.val '' Y.1), by
       -- have cardY : # Y.1 = n := Y.2
       -- simp_rw [cardY]
       have : # (insert a (Subtype.val '' Y.1) : Set ℕ) = n + 1 := by
@@ -619,7 +636,7 @@ theorem ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (�
       push_cast
       exact this⟩
 
-    let c' (a : ℕ) (A : Set ℕ) (Y : abcd (A \ {b | b ≤ a} : Set ℕ) n ) := c $ f a A Y
+    let c' (a : ℕ) (A : Set ℕ) (Y : edges (A \ {b | b ≤ a} : Set ℕ) n ) := c $ f a A Y
 
     let mind (B : {A : Set ℕ // # A = ℵ₀}) : {a : ℕ // a ∈ B.1 ∧ ∀ b ∈ B.1, a ≤ b} := { --maybe find better name for "mind", right now this is just to avoid confusion with the usual minimum
       val := sInf B.1
@@ -758,42 +775,26 @@ theorem ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (�
           exact sequence_monotone k_lt_l $ ha l
         have that : Y.1 \ {a k} ⊆ (sequence k).1 \ {b | b ≤ a k} := by
           apply subset_trans this' h'_rec
-        --have the_other_one := (h_rec k).choose_spec.2 Y
 
-
-
-        let Y' : (abcd ↑((sequence k).1 \ {b | b ≤ (mind $ sequence k).1}) ↑n) := {
+        let Y' : (edges ↑((sequence k).1 \ {b | b ≤ (mind $ sequence k).1}) ↑n) := {
           val := {y | y.1 ∈ Y.1 ∧ y.1 ≠ a k}
           property := by
-            --let f (y : {y | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
-            have : n = # ((Y.1 \ {a k}) : Set ℕ) := by
-              symm
-              exact card_minus_one Y.2 ak_mem
 
-            rw [this]
+            rw [← card_minus_one Y.2 ak_mem]
 
-            have this : # {y : ↑((sequence k).1 \ {b | b ≤ (mind $ sequence k).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k} = #(Y.1 \ {a k} : Set ℕ) := by
-              rw [Cardinal.eq]
+            let g (x : {y : ↑((sequence k).1 \ {b | b ≤ (mind $ sequence k).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
+                    : ↑(Y.1 \ {a k}) := ⟨x.1.1, x.2⟩
+            have g_bij : g.Bijective := by
+              constructor
+              · intro x y hxy
+                ext
+                rw [Subtype.ext_iff] at hxy
+                exact hxy
 
-              let g (x : {y : ↑((sequence k).1 \ {b | b ≤ (mind $ sequence k).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
-                      : ↑(Y.1 \ {a k}) := ⟨x.1.1, x.2⟩
-              have g_bij : g.Bijective := by
-                constructor
-                · intro x y hxy
-                  ext
-                  rw [Subtype.ext_iff] at hxy
-                  exact hxy
+              · intro y
+                use ⟨⟨y.1, that y.2⟩, y.2⟩
 
-                · intro y
-                  specialize that y.2
-                  use ⟨⟨y.1, that⟩, y.2⟩
-
-              -- TODO: this seems weirdly unhandy, this should be easier!
-              use Equiv.ofBijective g g_bij
-              use (Equiv.ofBijective g g_bij).symm
-              exact Equiv.left_inv' (Equiv.ofBijective g g_bij)
-              exact Equiv.right_inv' (Equiv.ofBijective g g_bij)
-            exact this
+            exact card_eq_of_bijection g_bij
         }
         have hY' : Y'.1 ⊆ (h_next $ sequence k).choose := by
           intro y hy
@@ -905,14 +906,14 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
 
     by_cases i = 0
     ·
-      have {Y : abcd ℕ n} (hY : Y.1 ⊆ H) : c Y < m := by
+      have {Y : edges ℕ n} (hY : Y.1 ⊆ H) : c Y < m := by
         specialize hi Y hY
         rw [h] at hi
         simp at hi
         exact Fin.not_le.mp hi
 
-      have (Y : abcd H n) : (c ⟨Subtype.val '' Y.1, abcd_monotone Y⟩ : ℕ) < m := by
-        have {Y : abcd ℕ n} (hY : Y.1 ⊆ H) : (c Y : ℕ) < m := by
+      have (Y : edges H n) : (c ⟨Subtype.val '' Y.1, edges_monotone Y⟩ : ℕ) < m := by
+        have {Y : edges ℕ n} (hY : Y.1 ⊆ H) : (c Y : ℕ) < m := by
           by_contra neg
           simp at neg
           specialize hi Y hY
@@ -926,7 +927,7 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
         apply this
         simp
 
-      let c' (Y : abcd H n) : Fin m := Fin.castLT (c ⟨Subtype.val '' Y.1, abcd_monotone Y⟩) (this Y) -- this complains about "unused variables"
+      let c' (Y : edges H n) : Fin m := Fin.castLT (c ⟨Subtype.val '' Y.1, edges_monotone Y⟩) (this Y) -- this complains about "unused variables"
 
       rw [← mk_nat] at hH
 
@@ -942,7 +943,7 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
         ext
         simp
 
-        have : Subtype.val ⁻¹' Y.1 ∈ abcd H n := by
+        have : Subtype.val ⁻¹' Y.1 ∈ edges H n := by
           have : n = # Y.1 := by exact Y.2.symm
           simp_rw [this]
           apply mk_preimage_of_injective_of_subset_range
@@ -1001,9 +1002,9 @@ example : ¬arrows_card (2^ℵ₀) 3 2 ℵ₀ := by
   -- any homogenous set has size at most 2,
   --    since three different binary sequences cant disagree pairwise
 
-  let c (Y : abcd (ℕ → Fin 2) 2) : ℕ := sInf {k : ℕ | ∀ a ∈ Y.1, ∀ b ∈ Y.1, a ≠ b → a k ≠ b k}
+  let c (Y : edges (ℕ → Fin 2) 2) : ℕ := sInf {k : ℕ | ∀ a ∈ Y.1, ∀ b ∈ Y.1, a ≠ b → a k ≠ b k}
 
-  have hc (Y : abcd (ℕ → Fin 2) 2) : c Y ∈ {k : ℕ | ∀ a ∈ Y.1, ∀ b ∈ Y.1, a ≠ b → a k ≠ b k} := by
+  have hc (Y : edges (ℕ → Fin 2) 2) : c Y ∈ {k : ℕ | ∀ a ∈ Y.1, ∀ b ∈ Y.1, a ≠ b → a k ≠ b k} := by
     apply Nat.sInf_mem
     --by_contra neg
 
@@ -1185,7 +1186,7 @@ theorem erdos_rado {n : ℕ} {κ : Cardinal} (hκ : ℵ₀ ≤ κ) :
     rw [ℶ_zero]
     intro A B hA hB c
 
-    let f (x : A) : (abcd A 1) := ⟨{x}, by rw [abcd]; simp⟩
+    let f (x : A) : (edges A 1) := ⟨{x}, by rw [edges]; simp⟩
 
     have hf : f.Bijective := by
       constructor
@@ -1198,7 +1199,7 @@ theorem erdos_rado {n : ℕ} {κ : Cardinal} (hκ : ℵ₀ ≤ κ) :
         ext1
         rw [hx]
 
-    have hA' : succ κ ≤ # (abcd A 1) := by
+    have hA' : succ κ ≤ # (edges A 1) := by
       rw [← hA]
       rw [le_def]
 
@@ -1252,7 +1253,7 @@ theorem erdos_rado {n : ℕ} {κ : Cardinal} (hκ : ℵ₀ ≤ κ) :
 
     -- maybe add some type like "almost a colouring" and save some headaches with casts
 
-    let c' (a : A) (Y : abcd ((univ : Set A) \ {a} : Set A) (n + 1)) := c ⟨insert a (Subtype.val '' Y.1), by
+    let c' (a : A) (Y : edges ((univ : Set A) \ {a} : Set A) (n + 1)) := c ⟨insert a (Subtype.val '' Y.1), by
         have : # (Subtype.val '' Y.1) = n + 1 := by
           have : #Y.1 = n + 1 := by
             exact Y.2
@@ -1266,7 +1267,7 @@ theorem erdos_rado {n : ℕ} {κ : Cardinal} (hκ : ℵ₀ ≤ κ) :
           exact ((mem_diff b.1).mp b.2).2 hb.2
         norm_cast at this⟩
 
-    have thingy {a : A} {B : Set A} {Y : abcd A (n + 1)} (ha : a ∉ B) (hY : Y.1 ⊆ B) : Subtype.val ⁻¹' Y.1 ∈ abcd ((Set.univ : Set A) \ {a} : Set A) (n + 1) := by
+    have thingy {a : A} {B : Set A} {Y : edges A (n + 1)} (ha : a ∉ B) (hY : Y.1 ⊆ B) : Subtype.val ⁻¹' Y.1 ∈ edges ((Set.univ : Set A) \ {a} : Set A) (n + 1) := by
       have : # Y.1 = n + 1 := by exact Y.2
       simp_rw [← this]
       apply mk_preimage_of_injective_of_subset_range
@@ -1278,7 +1279,7 @@ theorem erdos_rado {n : ℕ} {κ : Cardinal} (hκ : ℵ₀ ≤ κ) :
         exact ha $ hY hx
 
     have claim : ∃ A' : Set A, # A' = ℶ κ (n + 1) ∧ ∀ B : Set A, # B = ℶ κ n → ∀ b ∈ Bᶜ, ∃ a ∈ (A' \ B),
-         ∀ Y : abcd A (n + 1), Y.1 ⊆ B → c' a ⟨Subtype.val ⁻¹' Y.1, sorry⟩ = c' b ⟨Subtype.val ⁻¹' Y, sorry⟩ := sorry
+         ∀ Y : edges A (n + 1), Y.1 ⊆ B → c' a ⟨Subtype.val ⁻¹' Y.1, sorry⟩ = c' b ⟨Subtype.val ⁻¹' Y, sorry⟩ := sorry
 
     obtain ⟨X, hX⟩ := claim
 
