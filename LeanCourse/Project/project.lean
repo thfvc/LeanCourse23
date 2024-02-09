@@ -2,6 +2,8 @@ import Mathlib.SetTheory.Cardinal.Basic
 import Mathlib.SetTheory.Cardinal.Ordinal
 import Mathlib.SetTheory.Cardinal.Cofinality
 import Mathlib.SetTheory.Cardinal.Finite
+import Mathlib.Data.Real.Basic
+import Mathlib.Data.Real.Cardinality
 
 open Ordinal
 open Cardinal
@@ -391,6 +393,8 @@ lemma arrows_card_lift_left.{u1, u2} {lambda κ : Cardinal.{u1}} {n : ℕ} {μ :
   rw [← lift_id μ]
   exact arrows_card_lift h
 
+lemma neq_of_not_member_singleton {A : Type*} {a b : A} (h : a ∉ ({b} : Set A)) : b ≠ a := by
+  exact Ne.symm h
 
 -- TODO: change all occurences
 lemma fin2_one_of_ne_zero {x : Fin 2} (h : x ≠ 0) : x = 1 := by
@@ -436,6 +440,10 @@ lemma singleton_abcd {A : Type*} (x : A) : {x} ∈ abcd A 1  := by
     rw [abcd]
     simp
 
+lemma mono_backwards {A B : Type*} [LinearOrder A] [LinearOrder B] {f : A → B} (ha : Monotone f) {k l : A} (hkl : f k < f l) : k < l := by
+  by_contra hyp
+  simp at hyp
+  exact LT.lt.false $ lt_of_le_of_lt (ha hyp) hkl
 
 -- this is how the usual pigeonhole principle (in its most basic form) looks in this context.
 -- Note: Since LEAN doesnt identify singleton sets and their contents, this lemma is (usually) less usable
@@ -497,7 +505,19 @@ lemma pigeonhole_principle_abcd : arrows_card ℵ₀ ℵ₀ 1 2 := by
 
   exact LT.lt.ne this hA
 
--- WIP
+lemma set_nonempty_iff {A : Type*} {Y : Set A} : Y.Nonempty ↔ # Y ≠ 0 := by
+-- have : Nonempty Y.1 := by
+--                     rw [← mk_ne_zero_iff, Y.2]
+--                     exact NeZero.natCast_ne (Nat.succ n) Cardinal.{0}
+  constructor
+  · intro h
+    rw [mk_ne_zero_iff]
+    exact Nonempty.coe_sort h
+  · intro h
+    rw [nonempty_iff_ne_empty, ←nonempty_iff_ne_empty', ← mk_ne_zero_iff]
+    exact h
+
+
 
 lemma cardinal_succ_eq_add_one_of_finite {A : Type*} (hA : # A < ℵ₀) : Order.succ # A = # A + 1 := by
   rw [lt_aleph0] at hA
@@ -505,7 +525,42 @@ lemma cardinal_succ_eq_add_one_of_finite {A : Type*} (hA : # A < ℵ₀) : Order
   rw [hn]
   norm_cast
 
-lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ₀ : Cardinal.{u1}) n (2 : Cardinal.{u2}):= by
+lemma nonempty_of_succ_n {A : Type*} {n : ℕ} {Y : abcd A (Nat.succ n)} : Y.1.Nonempty := by
+  rw [set_nonempty_iff]
+  let yyyy := Y.2
+  rw [yyyy]
+  exact NeZero.natCast_ne (Nat.succ n) Cardinal.{u_1}
+
+def seq' (next : {A : Set ℕ // # A = ℵ₀} → {A : Set ℕ // # A = ℵ₀}) :
+                        ℕ → {A : Set ℕ // # A = ℵ₀}
+      | 0 => ⟨(Set.univ : Set ℕ), by
+          rw [@mk_univ, mk_nat]⟩
+      | k + 1 => next $ seq' next k
+
+example (next : {A : Set ℕ // # A = ℵ₀} → {A : Set ℕ // # A = ℵ₀}) (k : ℕ) : seq' next (k + 1) = next (seq' next k) := by
+  rfl
+
+
+lemma card_minus_one {A : Type*} {n : ℕ} {Y : Set A} {a : A} (hA : # Y = (n + 1 : ℕ)) (ha : a ∈ Y) : # ↑(Y \ {a}) = n := by
+  apply Order.succ_injective
+  norm_cast
+  --rw [succ_eq_add_one]
+  rw [← hA]
+  have a_k_sub_Y : {a} ⊆ Y := by
+    exact singleton_subset_iff.mpr ha
+  rw [← mk_diff_add_mk a_k_sub_Y]
+  simp
+  have finite : # ↑(Y \ {a}) < ℵ₀ := by
+    apply lt_of_le_of_lt
+    · have sub_Y : (Y \ {a}) ⊆ Y := by simp
+      exact mk_le_mk_of_subset sub_Y
+    · rw [hA]
+      exact nat_lt_aleph0 (Nat.succ n)
+  rw [cardinal_succ_eq_add_one_of_finite finite]
+
+set_option maxHeartbeats 415000 -- thats about as far down, as I can bring this
+
+theorem ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ₀ : Cardinal.{u1}) n (2 : Cardinal.{u2}):= by
   rw [← lift_aleph0.{0, u1}]
   rw [← lift_two.{u2, 0}]
   apply arrows_card_lift
@@ -517,18 +572,18 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
     apply arrows_card_of_arrows_type
     intro c
 
-    have ih' (a : ℕ) (A : Set ℕ) (h : # A = ℵ₀) : arrows_type (A \ {b | b ≤ a} : Set ℕ) ℵ₀ n (Fin 2) := by
+    have ih' (a : ℕ) (B : {A : Set ℕ // # A = ℵ₀}) : arrows_type (B.1 \ {b | b ≤ a} : Set ℕ) ℵ₀ n (Fin 2) := by
       apply hn
       · apply le_antisymm
         · exact mk_le_aleph0
         · by_contra neg
           simp at neg
-          have thingy : {b | b ∈ A ∧ b ≤ a}.Finite := by
+          have thingy : {b | b ∈ B.1 ∧ b ≤ a}.Finite := by
             apply (finite_le_nat a).subset
             simp
 
-          have that : A.Finite := by
-            have : A = {x | x ∈ A ∧ a < x} ∪ {b | b ∈ A ∧ b ≤ a} := by
+          have that : B.1.Finite := by
+            have : B.1 = {x | x ∈ B.1 ∧ a < x} ∪ {b | b ∈ B.1 ∧ b ≤ a} := by
               ext x
               constructor
               · intro hx
@@ -542,7 +597,7 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
             rw [this]
             exact Set.Finite.union neg thingy
           apply that.not_infinite
-          exact infinite_coe_iff.mp $ infinite_iff.mpr $ Eq.le (id h.symm)
+          exact infinite_coe_iff.mp $ infinite_iff.mpr $ Eq.le (id B.2.symm)
       · exact mk_fin 2
 
     let f (a : ℕ) (A : Set ℕ) (Y : abcd (A \ {b | b ≤ a} : Set ℕ) n) : abcd ℕ (Nat.succ n) := ⟨insert a (Subtype.val '' Y.1), by
@@ -566,50 +621,44 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
 
     let c' (a : ℕ) (A : Set ℕ) (Y : abcd (A \ {b | b ≤ a} : Set ℕ) n ) := c $ f a A Y
 
-    let mind (A : Set ℕ) (hA : # A = ℵ₀) : {a : ℕ // a ∈ A ∧ ∀ b ∈ A, a ≤ b} := { --maybe find better name for "mind", right now this is just to avoid confusion with the usual minimum
-      val := sInf A
+    let mind (B : {A : Set ℕ // # A = ℵ₀}) : {a : ℕ // a ∈ B.1 ∧ ∀ b ∈ B.1, a ≤ b} := { --maybe find better name for "mind", right now this is just to avoid confusion with the usual minimum
+      val := sInf B.1
       property := by
         constructor
         · apply Nat.sInf_mem
           apply nonempty_coe_sort.mp
-          rw [← mk_ne_zero_iff, hA]
+          rw [← mk_ne_zero_iff, B.2]
           exact aleph0_ne_zero
         · exact fun b a ↦ Nat.sInf_le a
     }
 
-    let h_next (A : Set ℕ) (hA : # A = ℵ₀) := ih' (mind A hA) A hA (c' (mind A hA) A)
+    let h_next (B : {A : Set ℕ // # A = ℵ₀}) := ih' (mind B) B (c' (mind B) B.1)
 
 
-    let next (A : Set ℕ) (hA : # A = ℵ₀) := Subtype.val '' (h_next A hA).choose
+    have next_inf (B : {A : Set ℕ // # A = ℵ₀}) : # (Subtype.val '' (h_next B).choose) = ℵ₀ := by
+      conv_rhs => rw [← (h_next B).choose_spec.1]
+      apply mk_image_eq Subtype.coe_injective
 
-    have h'_next (A : Set ℕ) (hA : # A = ℵ₀) : next A hA ⊆ A \ {b | b ≤ mind A hA}:= by
+    let next (B : {A : Set ℕ // # A = ℵ₀}) : {A : Set ℕ // # A = ℵ₀} := ⟨Subtype.val '' (h_next B).choose, next_inf B⟩
+
+
+    let sequence := seq' next
+
+    have delete_or_fix (k : ℕ) : (sequence (k + 1)).1 = (next $ sequence k).1 := by rfl
+
+    have h_rec (k : ℕ) := h_next $ sequence k
+
+    let a (k : ℕ) : ℕ := mind $ sequence k
+
+    have ha (k : ℕ) : a k ∈ (sequence k).1 := by
+      exact (mind $ sequence k).2.1
+
+
+    have h'_rec {k : ℕ} : (sequence (k + 1)).1 ⊆ (sequence k).1 \ {x | x ≤ a k} := by
       intro a ha
       obtain ⟨a', ha'⟩ := ha
       rw [← ha'.2]
       exact a'.2
-
-    have next_inf (A : Set ℕ) (hA : # A = ℵ₀) : # (next A hA) = ℵ₀ := by
-      rw [← (h_next A hA).choose_spec.1]
-      apply mk_image_eq Subtype.coe_injective
-
-    let rec sequence : (k : ℕ) → {A : Set ℕ // # A = ℵ₀}
-      | 0 => ⟨(Set.univ : Set ℕ), by
-          rw [@mk_univ, mk_nat]⟩
-      | k + 1 => ⟨next (sequence k) (sequence k).2, next_inf (sequence k) (sequence k).2⟩
-
-    have delete_or_fix (k : ℕ) : (sequence (k + 1)).1 = next (sequence k) (sequence k).2 := by sorry --this is true by definition, I dont know what the problem is
-
-    have h_rec (k : ℕ) := h_next (sequence k).1 (sequence k).2
-
-    let a (k : ℕ) : ℕ := mind (sequence k).1 (sequence k).2
-
-    have ha (k : ℕ) : a k ∈ (sequence k).1 := by
-      exact (mind (sequence k).1 (sequence k).2).2.1
-
-
-    have h'_rec {k : ℕ} : (sequence (k + 1)).1 ⊆ (sequence k).1 \ {x | x ≤ a k} := by
-      rw [delete_or_fix]
-      exact h'_next (sequence k).1 (sequence k).2
 
     have sequence_monotone {a b : ℕ} (hab : a ≤ b) : (sequence b).1 ⊆ (sequence a).1 := by
       have {k l : ℕ} : (sequence $ k + l).1 ⊆ (sequence k) := by
@@ -647,8 +696,6 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
       rw [hz.2]
       apply ha₁' x z hz.1
 
-    let R := range a
-
     let i (k : ℕ) : Fin 2 := (h_rec k).choose_spec.2.choose
     let hi (k : ℕ) := (h_rec k).choose_spec.2.choose_spec
 
@@ -670,6 +717,23 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
       intro Y hY
       let k := sInf (a ⁻¹' Y.1)
 
+      have ak_mem : a k ∈ Y.1 := by
+        rw [← Set.mem_preimage]
+        apply Nat.sInf_mem
+        obtain ⟨y, hy⟩ := nonempty_of_succ_n
+        obtain ⟨x, hx⟩ := hY hy
+        use x
+        rw [mem_preimage, hx.2]
+        exact hy
+              --       simp_rw [← yyyyyy]
+              --       norm_num
+              --       exact Cardinal.succ_ne_zero ↑n
+              --     obtain ⟨y, hy⟩ := Y_nonempty
+              --     obtain ⟨x, hx⟩ := hY hy
+              --     use x
+              --     rw [mem_preimage, hx.2]
+              --     exact hy
+
       have k_min {b : ℕ} (hb : b ∈ Y.1) : a k ≤ b := by
         obtain ⟨l, hl⟩ := hY hb
         rw [← hl.2]
@@ -680,78 +744,44 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
 
 
       have that : c Y = i k := by
-        have : Y.1 \ {a k} ⊆ (sequence (k + 1)).1 := by
+        have this' : Y.1 \ {a k} ⊆ (sequence (k + 1)).1 := by
           intro y hy
           obtain ⟨l, hl⟩ := hY hy.1
           have k_lt_l : k < l := by
-            apply lt_of_le_of_ne'
-            · by_contra hyp
-              specialize a_mon $ lt_of_not_le hyp
-              rw [hl.2] at a_mon
-              apply not_le_of_lt a_mon
-              exact k_min hy.1
-            · by_contra hyp
-              apply hy.2
-              rw [←hl.2, hyp]
-              simp
+            apply mono_backwards a_mon.monotone
+            rw [hl.2]
+            apply lt_of_le_of_ne
+            · exact k_min hy.1
+            · exact Ne.symm hy.2
+
           rw [←hl.2]
-          apply sequence_monotone k_lt_l $ ha l
+          exact sequence_monotone k_lt_l $ ha l
         have that : Y.1 \ {a k} ⊆ (sequence k).1 \ {b | b ≤ a k} := by
-          apply subset_trans this h'_rec
+          apply subset_trans this' h'_rec
         --have the_other_one := (h_rec k).choose_spec.2 Y
 
 
 
-        let Y' : (abcd ↑((sequence k).1 \ {b | b ≤ (mind (sequence k).1 (sequence k).2).1}) ↑n) := {
+        let Y' : (abcd ↑((sequence k).1 \ {b | b ≤ (mind $ sequence k).1}) ↑n) := {
           val := {y | y.1 ∈ Y.1 ∧ y.1 ≠ a k}
           property := by
             --let f (y : {y | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
             have : n = # ((Y.1 \ {a k}) : Set ℕ) := by
-              apply Order.succ_injective
-              norm_cast
-              let yyyyyy := Y.2.symm -- need this so simp_rw is not too strong
-              simp_rw [yyyyyy]
-              have a_k_sub_Y : {a k} ⊆ Y.1 := by
-                have : k ∈ a ⁻¹' Y.1 := by
-                  apply Nat.sInf_mem
-                  have Y_nonempty : Set.Nonempty Y.1 := by
-                    rw [Set.nonempty_iff_ne_empty, ← Set.nonempty_iff_ne_empty', ← mk_ne_zero_iff]
-                    simp_rw [← yyyyyy]
-                    norm_num
-                    exact Cardinal.succ_ne_zero ↑n
-                  obtain ⟨y, hy⟩ := Y_nonempty
-                  obtain ⟨x, hx⟩ := hY hy
-                  use x
-                  simp
-                  simp at hx
-                  rw [hx.2]
-                  exact hy
-                simp at this
-                simp [this]
-              rw [← mk_diff_add_mk a_k_sub_Y]
-              simp
-              have finite : # ((Y.1 \ {a k}) : Set ℕ) < ℵ₀ := by
-                apply lt_of_le_of_lt
-                · have sub_Y : (Y.1 \ {a k}) ⊆ Y.1 := by simp
-                  exact mk_le_mk_of_subset sub_Y
-                · simp_rw [← yyyyyy]
-                  exact nat_lt_aleph0 (Nat.succ n)
-              rw [cardinal_succ_eq_add_one_of_finite finite]
+              symm
+              exact card_minus_one Y.2 ak_mem
+
             rw [this]
 
-            have this : # {y : ↑((sequence k).1 \ {b | b ≤ (mind (sequence k).1 (sequence k).2).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k} = #(Y.1 \ {a k} : Set ℕ) := by
+            have this : # {y : ↑((sequence k).1 \ {b | b ≤ (mind $ sequence k).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k} = #(Y.1 \ {a k} : Set ℕ) := by
               rw [Cardinal.eq]
 
-              have hg (x : {y : ↑((sequence k).1 \ {b | b ≤ (mind (sequence k).1 (sequence k).2).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
-                      : x.1.1 ∈ (Y.1 \ {a k}) := x.2
-
-              let g (x : {y : ↑((sequence k).1 \ {b | b ≤ (mind (sequence k).1 (sequence k).2).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
+              let g (x : {y : ↑((sequence k).1 \ {b | b ≤ (mind $ sequence k).1}) | y.1 ∈ Y.1 ∧ y.1 ≠ a k})
                       : ↑(Y.1 \ {a k}) := ⟨x.1.1, x.2⟩
               have g_bij : g.Bijective := by
                 constructor
                 · intro x y hxy
                   ext
-                  simp at hxy
+                  rw [Subtype.ext_iff] at hxy
                   exact hxy
 
                 · intro y
@@ -765,13 +795,13 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
               exact Equiv.right_inv' (Equiv.ofBijective g g_bij)
             exact this
         }
-        have hY' : Y'.1 ⊆ (h_next (sequence k).1 (sequence k).2).choose := by
+        have hY' : Y'.1 ⊆ (h_next $ sequence k).choose := by
           intro y hy
           have dumsda : y.1 ∈ Y.1 \ {a k} := by
             exact hy
-          specialize this dumsda
-          rw [delete_or_fix] at this
-          obtain ⟨x, hx⟩ := this
+          specialize this' dumsda
+          rw [delete_or_fix] at this'
+          obtain ⟨x, hx⟩ := this'
           have x_eq_y : x = y := by
             ext
             exact hx.2
@@ -789,7 +819,7 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
               have claim : k ∈ a ⁻¹' Y.1 := by
                 apply Nat.sInf_mem
                 apply Set.Nonempty.preimage'
-                · have : Nonempty Y.1 := by
+                · have : Nonempty Y.1 := by --TODO
                     rw [← mk_ne_zero_iff, Y.2]
                     exact NeZero.natCast_ne (Nat.succ n) Cardinal.{0}
                   apply nonempty_of_nonempty_subtype
@@ -816,9 +846,12 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
                   simp at h
                   exact h
               · simp
+
+
+        have : a k = (mind $ sequence k).1 := by rfl
+
         rw [← dingsda]
-        simp
-        exact hi
+        rw [hi]
 
       rw [that]
 
@@ -843,6 +876,9 @@ lemma ramsey_two.{u1, u2} (n : ℕ) : arrows_card (ℵ₀ : Cardinal.{u1}) (ℵ�
         rw [← a_mon.injective hx.2]
         exact hx.1
       exact this
+
+
+set_option maxHeartbeats 200000
 
 
 lemma this_is_a_lemma (m : ℕ) (a : Fin (m + 1)) : a ≠ m → a < m := by
@@ -890,11 +926,11 @@ theorem ramsey (n m : ℕ) : arrows_card ℵ₀ ℵ₀ n m := by
         apply this
         simp
 
-      let c' (Y : abcd H n) : Fin m := Fin.castLT (c ⟨Subtype.val '' Y.1, abcd_monotone Y⟩) (this Y)
+      let c' (Y : abcd H n) : Fin m := Fin.castLT (c ⟨Subtype.val '' Y.1, abcd_monotone Y⟩) (this Y) -- this complains about "unused variables"
 
       rw [← mk_nat] at hH
 
-      obtain ⟨H', hH'⟩ := hm H (Fin m) hH.1 rfl c'
+      obtain ⟨H', hH'⟩ := hm H (Fin m) hH.1 rfl c' -- obviously c' is used though
 
       use Subtype.val '' H'
       constructor
@@ -1080,6 +1116,38 @@ example : ¬arrows_card (2^ℵ₀) 3 2 ℵ₀ := by
 
 -- Everything below this line is the product of hubris
 
+-- variable (κ : Cardinal.{0})
+-- #check (ord κ).out
+
+-- instance {o : WellOrder} [Infinite o.α] : InfSet o.α := sorry
+
+-- instance {κ : Cardinal} {hκ : ℵ₀ ≤ κ}: LinearOrder ((ord κ).out.α → Fin 2) where
+--   le a b := a = b ∨ a (sInf {x | a x ≠ b x}) < b ((sInf {x | a x ≠ b x}))
+--   le_refl := by simp
+--   le_trans a b c hab hbc := by
+--     obtain a_eq_b | a_lt_b := hab
+--     · rw [a_eq_b]
+--       exact hbc
+--     · obtain b_eq_c | b_lt_c := hbc
+--       · rw [← b_eq_c]
+--         right
+--         exact a_lt_b
+--       · right
+
+
+--lemma to_be_named {κ : Cardinal} (hκ : ℵ₀ ≤ κ) : ¬∃
+
+example {κ : Cardinal} : ¬arrows_card (2 ^ κ) (Order.succ κ) 2 2 := by
+  sorry
+
+-- this one is giving troubles with universes, abandon mission
+-- example : ¬arrows_card (2 ^ aleph0) (aleph.{1} 1) 2 2 := by
+--   have card_R : 2 ^ ℵ₀ = # ℝ := Cardinal.mk_real.symm
+--   rw [card_R]
+
+--   let omega₁ := ord.{0} $ aleph 1
+
+--  have card_omega : aleph.{1} 1 = # omega₁ := by simp
 
 
 noncomputable section --huh, this is needed for the definition of ℶ
@@ -1217,3 +1285,9 @@ theorem erdos_rado {n : ℕ} {κ : Cardinal} (hκ : ℵ₀ ≤ κ) :
 
 
     sorry
+
+open Classical
+
+--lemma inaccessible_of_union {c : Cardinal} (hc : ∀ c' : Cardinal, 0 < c' → c' < c → ∀ (A : c'.out → (Set c.out)), (∀ i, # (A i) < c) → (∀ i, ∀ j, i ≠ j → A i ∩ A j = ∅) → (⋃ i, A i) ≠ Set.univ) : c.IsInaccessible := by sorry
+
+def weakly_compact.{u_1, u_2} (c : Cardinal) : Prop := (ℵ₀ < c) ∧ arrows_card.{u_1, u_2} c c 2 2
